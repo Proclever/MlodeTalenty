@@ -1,0 +1,122 @@
+﻿@using System.Text.RegularExpressions
+@model List<MT.Models.Offer>
+@{
+    ViewBag.Title = "Wyszukiwanie";
+    int s = 0;
+}
+@functions{ 
+            public static string StripHTML(string input)
+            {
+                return input == null ? "" : Regex.Replace(input, "<.*?>", String.Empty);
+            }
+            public static string PageUrl(int page)
+            {
+                if (HttpContext.Current.Request.Url.AbsoluteUri.Contains("page=")) return HttpContext.Current.Request.Url.AbsoluteUri.Split(new string[] { "page=" }, StringSplitOptions.None)[0] + "page=" + page.ToString();
+                else
+                {
+                    if (HttpContext.Current.Request.Url.AbsoluteUri.Contains('?')) return HttpContext.Current.Request.Url.AbsoluteUri + "&page=" + page.ToString();
+                    else return HttpContext.Current.Request.Url.AbsoluteUri + "?page=" + page.ToString();
+                }
+            }
+}
+
+<h2>@Html.Raw(Model.Count() == 0 ? "Nie znaleziono żadnych ofert." : "Znaleziono oferty: " + Model.Count().ToString())</h2>
+
+@if (Model.Where(x => x.sponsored).ToList().Count() > 0)
+{
+    <div id="sponsored" style="margin-top:20px;">
+        @foreach (var o in Model.Where(x => x.sponsored).ToList())
+        {
+            s++;
+            <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px;background-color:#ffd;">
+                <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                    <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                </div>
+                <div class="col-lg-9 col-md-9 col-sm-9">
+                    <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                    @if (o.Comment.Count() > 0) { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                    <p>
+                        @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                    </p>
+                    <p>
+                        @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                    </p>
+                    <p>
+                        @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska", "") : o.address.Replace(", Polska", ""))
+                    </p>
+                    <p>
+                        @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                        @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                    </p>
+                    <hr />
+                    <p>
+                        <img width="32" height="32" src="@Url.Content("~/images/" + (o.Company.logo != null && o.Company.logo != "" ? o.Company.logo : "defaultcompany.png"))" />
+                        @Html.ActionLink(o.Company.name, "Company", "Home", new { id = o.Company.id }, null)
+                    </p>
+                </div>
+            </div>
+            if (s == 5) { break; }
+        }
+    </div>
+}
+@if (Model.Count() > 0)
+{
+    <div id="offers" style="margin-top:20px;">
+        @foreach (var o in Model)
+    {
+            <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+                <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                    <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                </div>
+                <div class="col-lg-9 col-md-9 col-sm-9">
+                    <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                    @if (o.Comment.Count() > 0) { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                    <p>
+                        @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                    </p>
+                    <p>
+                        @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                    </p>
+                    <p>
+                        @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska","") : o.address.Replace(", Polska", ""))
+                    </p>
+                    <p>
+                        @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                        @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                    </p>
+                    <hr />
+                    <p>
+                        <img width="32" height="32" src="@Url.Content("~/images/" + (o.Company.logo != null && o.Company.logo != "" ? o.Company.logo : "defaultcompany.png"))" />
+                        <strong>@Html.ActionLink(o.Company.name, "Company", "Home", new { id = o.Company.id }, null)</strong>
+                    </p>
+                </div>
+            </div>
+        }
+    </div>
+    <div id="pagination">
+        <p style="text-align:center">Strona @ViewBag.page.ToString() z @ViewBag.lastpage.ToString()</p>
+        <p style="text-align:center">
+            @if (ViewBag.page > 1)
+            { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page - 1)" role="button">Poprzednia</a> }
+            @if (ViewBag.page > 1)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(1)" role="button">1</a> }
+            @if (ViewBag.page > 4)
+    { @Html.Raw("...") }
+            @if (ViewBag.page > 3)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page - 2)" role="button">@((ViewBag.page-2).ToString())</a> }
+            @if (ViewBag.page > 2)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page - 1)" role="button">@((ViewBag.page - 1).ToString())</a> }
+            <a style="margin:5px;" class="btn btn-primary btn-xs" href="@PageUrl(ViewBag.page)" role="button">@ViewBag.page.ToString()</a>
+            @if (ViewBag.page < ViewBag.lastpage - 1)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page+1)" role="button">@((ViewBag.page + 1).ToString())</a> }
+            @if (ViewBag.page < ViewBag.lastpage - 2)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page+2)" role="button">@((ViewBag.page + 2).ToString())</a> }
+            @if (ViewBag.page < ViewBag.lastpage - 3)
+    { @Html.Raw("...") }
+            @if (ViewBag.page < ViewBag.lastpage)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.lastpage)" role="button">@ViewBag.lastpage.ToString()</a> }
+            @if (ViewBag.page < ViewBag.lastpage)
+    { <a style="margin:5px;" class="btn btn-default btn-xs" href="@PageUrl(ViewBag.page+1)" role="button">Następna</a> }
+        </p>
+    </div>
+}

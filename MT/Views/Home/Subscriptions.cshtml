@@ -1,0 +1,59 @@
+﻿@using System.Text.RegularExpressions
+@using MT.Models
+@functions
+{
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{
+    ViewBag.Title = "Edytuj dane działalności";
+    string userid = ViewBag.userid;
+    var categories = db.Categorys.Select(x => new SelectListItem { Value = x.id.ToString(), Text = x.name });
+}
+@functions{
+    public static string StripHTML(string input)
+    {
+        return input == null ? "" : Regex.Replace(input, "<.*?>", String.Empty);
+    }
+}
+
+<h2>Obserwowane oferty</h2>
+@foreach (var wat in db.Users.Where(x => x.userid == userid).First().Watching.ToList())
+{
+    <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+        <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+            <a href="@Url.Action("Offer", "Home", new { id = wat.Offer.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (wat.Offer.Photo.Where(x => x.ismain).Count() > 0 ? wat.Offer.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+        </div>
+        <div class="col-lg-9 col-md-9 col-sm-9">
+            <h3 style="margin-top:0px;">@Html.ActionLink(wat.Offer.title, "Offer", "Home", new { id = wat.Offer.id }, null)</h3>
+            @if (wat.Offer.Comment.Count() > 0)
+            { @Html.Raw("<p>Średnia ocen: " + wat.Offer.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+            <p>
+                @Html.Raw(wat.Offer.Subcategory.Category.name) > @Html.Raw(wat.Offer.Subcategory.name)
+            </p>
+            <p>
+                @Html.Raw(wat.Offer.description.Length > 256 ? StripHTML(wat.Offer.description).Substring(0, 255) + "..." : StripHTML(wat.Offer.description))
+            </p>
+            <p>
+                @Html.Raw(wat.Offer.iscompanyaddress ? wat.Offer.Company.address.Replace(", Polska", "") : wat.Offer.address.Replace(", Polska", ""))
+            </p>
+            <p>
+                @Html.Raw((wat.Offer.agefrom == wat.Offer.ageto ? wat.Offer.ageto.ToString() : wat.Offer.agefrom.ToString() + " - " + wat.Offer.ageto.ToString()) + " lat" + (wat.Offer.ageto < 5 ? "a" : ""))
+                @Html.Raw((wat.Offer.individual ? " | Indywidualne " : "") + (wat.Offer.firstfree ? " | Pierwsze zajecia za darmo " : "") + (wat.Offer.drive ? " | Dojazd " : "") + (wat.Offer.online ? " | Online " : ""))
+            </p>
+            <hr />
+            <p>
+                <img width="32" height="32" src="@Url.Content("~/images/" + (wat.Offer.Company.logo != null && wat.Offer.Company.logo != "" ? wat.Offer.Company.logo : "defaultcompany.png"))" />
+                <strong>@Html.ActionLink(wat.Offer.Company.name, "Company", "Home", new { id = wat.Offer.Company.id }, null)</strong>
+            </p>
+        </div>
+    </div>
+}
+
+<h2>Obserwowane firmy</h2>
+@foreach (var subc in db.Users.Where(x => x.userid == userid).First().SubscribeCompany.ToList())
+{
+    <div>
+        <img width="32" height="32" src="@Url.Content("~/images/" + (subc.Company.logo != null && subc.Company.logo != "" ? subc.Company.logo : "defaultcompany.png"))" />
+        <strong>@Html.ActionLink(subc.Company.name, "Company", "Home", new { id = subc.Company.id }, null)</strong>
+    </div>
+}

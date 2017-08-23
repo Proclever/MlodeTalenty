@@ -1,0 +1,186 @@
+﻿@using System.Text.RegularExpressions
+@using Microsoft.AspNet.Identity
+@model MT.Models.Company
+@{
+    ViewBag.Title = StripHTML(Model.name);
+    bool isvalidcomp = (Model.userid == User.Identity.GetUserId() ? true : false);
+    var userid = User.Identity.GetUserId();
+    bool isvuser = ViewBag.isvuser;
+}
+@functions{ 
+    public static string StripHTML(string input)
+    {
+        return input == null ? "" : Regex.Replace(input, "<.*?>", String.Empty);
+    }
+}
+
+<h2 style="text-align:center">@Html.Raw(Model.name)</h2>
+
+
+@if (isvalidcomp)
+{
+    <div class="jumbotron">
+        <p style="text-align:center">
+            Opcje
+        </p>
+        <p style="text-align:center">
+            <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@Url.Action("Index", "Home")" role="button">Twój panel</a>
+            <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@Url.Action("EditCompany", "Home", new { id = Model.id })" role="button">Edytuj</a>
+            <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@(Request.Url.GetLeftPart(UriPartial.Authority) + "/Manage")" role="button">Ustawienia konta</a>
+            @*@Html.ActionLink("Usuń", "DeleteCompany", "Home", new { id = Model.id })*@
+        </p>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-3 col-md-3 col-sm-4">
+        <div>
+            <img style="height: 100%; width: 100%; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (Model.logo != null && Model.logo != "" ? Url.Content(Model.logo) : "defaultcompany.png"))" />
+        </div>
+        <div>
+            @using (Html.BeginForm("AddLogo", "Home", new { id = Model.id }, FormMethod.Post, new { enctype = "multipart/form-data" }))
+            {
+                @Html.AntiForgeryToken()
+                <input type="file" id="imagefile" name="file" accept="image/*" />
+                <div id="submitdiv"><input type="submit" name="Submit" id="Submit" value="Zastąp" /></div>
+            }
+        </div>
+        <hr />
+        <div>
+            <p id="phone"></p>
+            <p>
+                @if (Model.email != "" && Model.email != null) { @Html.ActionLink("Napisz wiadomość", "EmailForm", "Home", new { id = Model.id, kind = "Company" }, null) }
+            </p> 
+        </div>
+        @if (Model.lat != null && Model.lon != null && Model.lat != 0 && Model.lon != 0)
+        {<div><div id="map" style="position:relative; width: 300px; height: 300px; max-width: 100%; max-height: 100%;  object-fit: contain;border: 1px solid #eee;border-radius: 5px;"></div></div>}
+    </div>
+    <div class="col-lg-9 col-md-9 col-sm-8">
+        @Html.Raw(Model.description)
+        @if (isvuser)
+        {
+            <p>
+                @if (Model.SubscribeCompany.Where(x => x.User.userid == userid).Count() == 1)
+                {
+                    <a style="margin:10px;" class="btn btn-default btn-lg" href="@Url.Action("DeleteSubscriptionCompany", "Home", new { id = Model.SubscribeCompany.Where(x => x.User.userid == userid).First().id })" role="button">Nie obserwuj</a>
+                }
+                else
+                {
+                    <a style="margin:10px;" class="btn btn-default btn-lg" href="@Url.Action("AddSubscriptionCompany", "Home", new { company_id = Model.id })" role="button">Obserwuj</a>
+                }
+            </p>
+        }
+        <hr />
+        <div>
+            @if (Model.Offer.Where(x => x.publicated).ToList().Count() > 0)
+            {
+                <h2>Oferowane zajęcia</h2>
+
+                <div id="offers">
+                    @foreach (var o in Model.Offer.Where(x => x.publicated).ToList())
+                {
+                        <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+                            <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                                <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                            </div>
+                            <div class="col-lg-9 col-md-9 col-sm-9">
+                                <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                                @if (o.Comment.Count() > 0)
+                                { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                                <p>
+                                    @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                                </p>
+                                <p>
+                                    @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                                </p>
+                                <p>
+                                    @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska", "") : o.address.Replace(", Polska", ""))
+                                </p>
+                                <p>
+                                    @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                                    @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                                </p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <hr />
+        <div>
+            @if (isvalidcomp && Model.Offer.Where(x => !x.publicated).ToList().Count() > 0)
+            {
+                <h2>Nieopublikowane zajęcia</h2>
+
+                <div id="unpublished">
+                    @foreach (var o in Model.Offer.Where(x => !x.publicated).ToList())
+                    {
+                        <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+                            <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                                <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                            </div>
+                            <div class="col-lg-9 col-md-9 col-sm-9">
+                                <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                                @if (o.Comment.Count() > 0)
+                                { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                                <p>
+                                    @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                                </p>
+                                <p>
+                                    @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                                </p>
+                                <p>
+                                    @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska", "") : o.address.Replace(", Polska", ""))
+                                </p>
+                                <p>
+                                    @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                                    @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                                </p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "__AjaxAntiForgeryForm" }))
+{
+    @Html.AntiForgeryToken()
+}
+
+@section Scripts {
+<script>
+    var form = $('#__AjaxAntiForgeryForm');
+    var token = $('input[name="__RequestVerificationToken"]', form).val();
+    $.ajax({
+        url: location.origin + '/Home/Phone?isoffer=false&id=@Model.id.ToString()', type: 'POST', data: { __RequestVerificationToken: token }, success: function (data) {
+            document.getElementById('phone').insertAdjacentHTML('afterbegin', data);
+        }
+    });
+    function GetMap() {
+        var map = new Microsoft.Maps.Map('#map', {
+            credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa',
+            center: new Microsoft.Maps.Location(@Model.lat.ToString().Replace(',','.'), @Model.lon.ToString().Replace(',', '.')),
+            zoom: 15
+        });
+        map.entities.clear();
+        var pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), { width: 50, height: 50, draggable: false });
+        map.entities.push(pushpin);
+        pushpin.setLocation(new Microsoft.Maps.Location(@Model.lat.ToString().Replace(',', '.'), @Model.lon.ToString().Replace(',', '.')));
+
+        var infobox = new Microsoft.Maps.Infobox(map.getCenter(), {
+            title: '@Model.name',
+            description: '@Model.address'
+        });
+        infobox.setMap(map);
+    }
+    //GetMap();
+    if(document.getElementById('imagefile').value == null || document.getElementById('imagefile').value == '') {
+        document.getElementById('submitdiv').style.display = "none";
+    }
+    else {
+        document.getElementById('submitdiv').style.display = "block";
+    }
+</script>
+}

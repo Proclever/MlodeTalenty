@@ -1,0 +1,82 @@
+﻿@using MT.Models
+@model MT.Models.Company
+@functions
+{
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{
+    ViewBag.Title = "Edytuj dane działalności";
+    string userid = ViewBag.userid;
+    var categories = db.Categorys.Select(x => new SelectListItem { Value = x.id.ToString(), Text = x.name });
+}
+
+<h2>Edytuj dane działalności</h2>
+
+@using (Html.BeginForm(new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(model => model.id)
+        @Html.HiddenFor(model => model.userid)
+        @Html.HiddenFor(model => model.created)
+        @Html.HiddenFor(model => model.logo)
+        <div class="form-group">
+            @Html.LabelFor(model => model.name, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.name, new { @class = "input-lg", @style="width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.name)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.description, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.description, new { @style = "max-width:100%" })
+                @Html.ValidationMessageFor(model => model.description)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.address, new { @class = "control-label col-md-2" })
+            <div id='addressContainer' class="col-md-10">
+                @Html.TextBox("had", Model.address, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.address)
+            </div>
+        </div>
+        <div id='printoutPanel2'></div>
+        <div class="form-group">
+            <div class="control-label col-md-2"></div>
+            <div class="col-md-10">
+                <div id="map" style="margin:5px;position:relative; width: 600px; height: 450px; max-width: 100%; max-height: 100%;  object-fit: contain;border: 1px solid #eee;border-radius: 5px;"></div>
+            </div>
+        </div>
+        @Html.HiddenFor(model => model.address)
+        @Html.HiddenFor(model => model.lat)
+        @Html.HiddenFor(model => model.lon)
+        
+        <div class="form-group">
+            @Html.LabelFor(model => model.email, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.email, new { @class = "input-lg", @style = "width:400px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.email)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.phone, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.phone, new { @class = "input-lg", @style = "width:200px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.phone)
+            </div>
+        </div>
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Zaktualizuj" class="btn btn-default btn-lg" />
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script src="https://cloud.tinymce.com/stable/tinymce.min.js?apiKey=rzrqr7v467z3hy84jqdrcb37ps4l0rx4smts9kxpoxenijae"></script>
+<script>tinymce.init({ selector:'textarea' });</script>    
+}

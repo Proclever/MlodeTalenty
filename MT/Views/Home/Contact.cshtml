@@ -1,0 +1,9 @@
+﻿@{
+    ViewBag.Title = "Kontakt";
+}
+<h2>@ViewBag.Title</h2>
+<p style="text-align:justify">W razie pytań lub problemów, prosimy o kontakt mailowy lub poprzez @Html.ActionLink("formularz kontaktowy", "EmailForm", "Home", new { id = 0, kind = "Contact" }, null).</p>
+<address>
+    <strong>Kontakt:</strong>   <a href="mailto:kontakt@mlodetalenty.net">kontakt@mlodetalenty.net</a><br />
+    <strong>Administrator:</strong>   <a href="mailto:administrator@mlodetalenty.net">administrator@mlodetalenty.net</a>
+</address>

@@ -1,0 +1,59 @@
+﻿@model MT.Models.EventDate
+@{
+    ViewBag.Title = "Dodaj godziny zajęć";
+}
+
+<h2>Dodaj godziny zajęć</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(model => model.id)
+        @Html.HiddenFor(model => model.offerid)
+        <div class="form-group">
+            @Html.LabelFor(model => model.day, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                <select class="input-lg" style="width:200px;max-width:100%" id="day" name="day">
+                    <option value=0>wybierz</option>
+                    <option value=1>Poniedziałek</option>
+                    <option value=2>Wtorek</option>
+                    <option value=3>Środa</option>
+                    <option value=4>Czwartek</option>
+                    <option value=5>Piątek</option>
+                    <option value=6>Sobota</option>
+                    <option value=7>Niedziela</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.Label("Zakres czasu", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBox("fromh", ViewBag.fromh == null ? 8 : (int)ViewBag.fromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class="form-control input-sm", @style = "width:60px;display:inline" })
+                @Html.Raw(":")
+                <select id="fromm" name="fromm" class="form-control input-sm" style="width:65px;display:inline">
+                    <option value=0>00</option>
+                    <option value=15 @Html.Raw(ViewBag.fromm != null && ViewBag.fromm == 15 ? "selected" : "")>15</option>
+                    <option value=30 @Html.Raw(ViewBag.fromm != null && ViewBag.fromm == 30 ? "selected" : "")>30</option>
+                    <option value=45 @Html.Raw(ViewBag.fromm != null && ViewBag.fromm == 45 ? "selected" : "")>45</option>
+                </select>
+                @Html.Raw(" - ")
+                @Html.TextBox("toh", ViewBag.toh == null ? 16 : (int)ViewBag.toh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:60px;display:inline" })
+                @Html.Raw(":")
+                <select id="tom" name="tom" class="form-control input-sm" style="width:65px;display:inline">
+                    <option value=0>00</option>
+                    <option value=15 @Html.Raw(ViewBag.tom != null && ViewBag.tom == 15 ? "selected" : "")>15</option>
+                    <option value=30 @Html.Raw(ViewBag.tom != null && ViewBag.tom == 30 ? "selected" : "")>30</option>
+                    <option value=45 @Html.Raw((ViewBag.tom == null || (ViewBag.tom != null && ViewBag.tom == 45)) ? "selected" : "")>45</option>
+                </select>
+            </div>
+        </div>
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Dodaj" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}

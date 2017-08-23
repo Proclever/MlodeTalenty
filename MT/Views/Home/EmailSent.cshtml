@@ -1,0 +1,9 @@
+﻿@{
+    ViewBag.Title = "Wiadomość została wysłana";
+}
+<h2>@ViewBag.Title</h2>
+
+<p style="text-align:justify">Dziekujemy za wiadomość. Odpowiedź zostanie przesłana na podany adres email w najblizszym czasie.</p>
+
+@if (ViewBag.Backlink != null)
+{<p>@ViewBag.Backlink</p>}

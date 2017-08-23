@@ -1,0 +1,227 @@
+﻿@using MT.Models
+@model MT.Models.Offer
+@functions
+{
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{
+    ViewBag.Title = "Edytuj ofertę";
+    string userid = ViewBag.userid;
+    var categories = db.Categorys.Select(x => new SelectListItem { Value = x.id.ToString(), Text = x.name });
+    bool caddress = db.Companys.Where(x => x.userid == userid).First().lat != null && db.Companys.Where(x => x.userid == userid).First().lon != null ? true : false;
+}
+
+<h2>Edytuj ofertę</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(model => model.id)
+        @Html.HiddenFor(model => model.companyid)
+        @Html.HiddenFor(model => model.created)
+        <div class="form-group">
+            @Html.Label("Kategoria", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                <select class="input-lg" style="width:400px;max-width:100%" id="category" name="category" onchange="OnCategoryChange(this.value)" data-val="true" data-val-required="Pole Kategoria jest wymagane.">
+                    <option value="">wybierz</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                    }
+                </select>
+                @Html.ValidationMessageFor(model => model.subcategoryid)
+            </div>
+        </div>
+        <div id="subcategorydiv" class="form-group" style="display:none" data-val="true" data-val-required="Pole Podkategoria jest wymagane.">
+            @Html.Label("Podkategoria", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                <select class="input-lg" style="width:400px;max-width:100%" id="subcategory" name="subcategory">
+                    <option value="">wybierz</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.title, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.title, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.title)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.description, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.description, new { @style = "max-width:100%" })
+                @Html.ValidationMessageFor(model => model.description)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.price, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.price, new { @type = "number", @class = "input-lg", @style = "width:100px;max-width:100%" }) / @Html.TextBoxFor(model => model.period, new { @class = "input-lg", @style = "width:100px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.price) @Html.ValidationMessageFor(model => model.period)
+            </div>
+        </div>
+        @if (caddress)
+        {
+            <div class="form-group">
+                @Html.LabelFor(model => model.iscompanyaddress, new { @class = "control-label col-md-2" })
+                <div class="col-md-10">
+                    @Html.EditorFor(model => model.iscompanyaddress, new { htmlAttributes = new { @onchange = "OnICAChange()" } })
+                    @Html.ValidationMessageFor(model => model.iscompanyaddress)
+                </div>
+            </div>
+        }
+        <div class="form-group">
+            @Html.LabelFor(model => model.objectname, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.objectname, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.objectname)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.address, new { @class = "control-label col-md-2" })
+            <div id='addressContainer' class="col-md-10">
+                @Html.TextBox("had", Model.address, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.address)
+            </div>
+        </div>
+        <div id='printoutPanel2'></div>
+        <div class="form-group">
+            <div class="control-label col-md-2"></div>
+            <div class="col-md-10">
+                <div id="map" style="margin:5px; position:relative; width: 600px; height: 450px; max-width: 100%; max-height: 100%;  object-fit: contain;border: 1px solid #eee;border-radius: 5px;"></div>
+            </div>
+        </div>
+        @Html.HiddenFor(model => model.address)
+        @Html.HiddenFor(model => model.lat)
+        @Html.HiddenFor(model => model.lon)
+        <div class="form-group">
+            @Html.LabelFor(model => model.email, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.email, new { @class = "input-lg", @style = "width:400px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.email)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.phone, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.phone, new { @class = "input-lg", @style = "width:200px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.phone)
+            </div>
+        </div>
+        
+        <div class="form-group">
+            @Html.Label("Zakres wiekowy", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                Od <input style="width:100px;" class="text-box single-line input-lg" data-val="true" data-val-number="Pole Wiek musi być liczbą." data-val-required="Pole Wiek jest wymagane." id="agefrom" name="agefrom" type="number" value=@Html.Raw(Model != null ? Model.agefrom.ToString() : "") min="0" maxlength="17"> do <input style="width:100px;" class="text-box single-line input-lg" data-val="true" data-val-number="Pole Wiek musi być liczbą." data-val-required="Pole Wiek jest wymagane." id="ageto" name="ageto" type="number" value=@Html.Raw(Model != null ? Model.ageto.ToString() : "") min="0" maxlength="17">
+                @Html.ValidationMessageFor(model => model.agefrom)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.individual, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.individual)
+                @Html.ValidationMessageFor(model => model.individual)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.firstfree, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.firstfree)
+                @Html.ValidationMessageFor(model => model.firstfree)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.drive, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.drive)
+                @Html.ValidationMessageFor(model => model.drive)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.online, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.online)
+                @Html.ValidationMessageFor(model => model.online)
+            </div>
+        </div>
+        @Html.HiddenFor(model => model.publicated)
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Zaktualizuj" class="btn btn-default btn-lg" />
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    function OnCategoryChange(id) {
+        if (id == '') {
+            $('#subcategory').find('option').not(':first').remove().end().val('');
+            document.getElementById('subcategorydiv').style.display = "none";
+        }
+        else {
+            $('#subcategory').find('option').not(':first').remove().end().val('');
+            $.ajax({
+                url: location.origin + '/Home/GetSubcategories/?cid=' + id, success: function (data) {
+                    document.getElementById('subcategory').insertAdjacentHTML('beforeend', data);
+                }
+            });
+            document.getElementById('subcategorydiv').style.display = "block";
+        }
+    }
+
+    function SetSubcategory() {
+        document.getElementById('category').value = @db.Subcategorys.Where(x => x.id == Model.subcategoryid).First().categoryid.ToString();
+        var id = @db.Subcategorys.Where(x => x.id == Model.subcategoryid).First().categoryid.ToString();
+
+        var request = makeHttpObject();
+        request.open("GET", location.origin + "/Home/GetSubcategories/?cid=" + id, true);
+        request.send(null);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4) {
+                document.getElementById('subcategory').insertAdjacentHTML('beforeend', request.responseText);
+                document.getElementById('subcategory').value = @Model.subcategoryid.ToString();
+            }
+        };
+        document.getElementById('subcategorydiv').style.display = "block";
+
+        //document.getElementById('subcategory').value = @Model.subcategoryid.ToString();
+    }
+
+    function makeHttpObject() {
+        try {return new XMLHttpRequest();}
+        catch (error) {}
+        try {return new ActiveXObject("Msxml2.XMLHTTP");}
+        catch (error) {}
+        try {return new ActiveXObject("Microsoft.XMLHTTP");}
+        catch (error) {}
+
+        throw new Error("Could not create HTTP request object.");
+    }
+
+    @if (Model != null && Model.subcategoryid != 0) { @Html.Raw("SetSubcategory();") }
+
+    function OnICAChange() {
+        if (document.getElementById("iscompanyaddress").checked == true) {
+            document.getElementById("had").value = "@Html.Raw(db.Companys.Where(x => x.userid == userid).First().address)";
+            document.getElementById("had").setAttribute("disabled", true);
+            document.getElementById("address").value = "@Html.Raw(db.Companys.Where(x => x.userid == userid).First().address)";
+            document.getElementById("lat").value = "@Html.Raw(db.Companys.Where(x => x.userid == userid).First().lat)";
+            document.getElementById("lon").value = "@Html.Raw(db.Companys.Where(x => x.userid == userid).First().lon)";
+        }
+        else {
+            document.getElementById("had").removeAttribute("disabled");
+        }
+    }
+    if (document.getElementById("iscompanyaddress").checked) {
+        document.getElementById("had").removeAttribute("disabled");
+    }
+</script>
+<script src="https://cloud.tinymce.com/stable/tinymce.min.js?apiKey=rzrqr7v467z3hy84jqdrcb37ps4l0rx4smts9kxpoxenijae"></script>
+<script>tinymce.init({ selector:'textarea' });</script>
+}

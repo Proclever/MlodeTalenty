@@ -1,0 +1,127 @@
+﻿@using System.Text.RegularExpressions
+@model MT.Models.Company
+@{
+    ViewBag.Title = "Strona główna";
+}
+@functions{
+    public static string StripHTML(string input)
+    {
+        return input == null ? "" : Regex.Replace(input, "<.*?>", String.Empty);
+    }
+}
+<h1 style="text-align:center;">Twój panel</h1>
+<div class="row">
+    <div class="col-lg-6 col-md-6">
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Powiadomienia</h2>
+            <div id="usetnots" style="overflow:auto; height:400px;">
+                <hr />
+                @if (Model.CompanyNotification.Count() == 0)
+                {
+                    <p>Nie posiadasz jeszcze żadnych powiadomień.</p>
+                }
+                else
+                {
+                    foreach (var n in Model.CompanyNotification.OrderByDescending(x => x.created).ToList())
+                    {
+                        <div @Html.Raw(!n.check ? "style=\"background-color:#ffd;\"" : "")>
+                            @if (n.offer == null || n.offer.Value == 0)
+                            {<p>@Html.Raw(n.title)</p>}
+                            else
+                            { <p><a href="@Url.Action("Offer", "Home", new { id = n.offer.Value })">@Html.Raw(n.title)</a></p> }
+                        </div>
+                        <hr />
+                    }
+                }
+            </div>
+        </div>
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Zajęcia opublikowane</h2>
+            <div id="zaj" style="overflow:auto; height:400px;">
+                @if (Model.Offer.Where(x => x.publicated).Count() == 0)
+                { <p>Nie posiadasz oplublikowanych zajęć.</p> }
+                else
+                {
+                    foreach (var o in Model.Offer.Where(x => x.publicated).ToList())
+                    {
+                        <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+                            <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                                <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                            </div>
+                            <div class="col-lg-9 col-md-9 col-sm-9">
+                                <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                                @if (o.Comment.Count() > 0)
+                                { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                                <p>
+                                    @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                                </p>
+                                <p>
+                                    @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                                </p>
+                                <p>
+                                    @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska", "") : o.address.Replace(", Polska", ""))
+                                </p>
+                                <p>
+                                    @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                                    @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                                </p>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 col-md-6">
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Zajęcia wyróżnione</h2>
+            <div id="wat" style="overflow:auto; height:400px;">
+                <p>Już wkrótce!</p>
+            </div>
+        </div>
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Zajęcia nieopublikowane</h2>
+            <div id="nzaj" style="overflow:auto; height:400px;">
+                @if (Model.Offer.Where(x => !x.publicated).Count() == 0) { <p>Nie posiadasz nieoplublikowanych zajęć.</p> }
+                else
+                {
+                    foreach (var o in Model.Offer.Where(x => !x.publicated).ToList())
+                    {
+                        <div class="row" style="margin:5px;padding:10px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;">
+                            <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                                <a href="@Url.Action("Offer", "Home", new { id = o.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (o.Photo.Where(x => x.ismain).Count() > 0 ? o.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                            </div>
+                            <div class="col-lg-9 col-md-9 col-sm-9">
+                                <h3 style="margin-top:0px;">@Html.ActionLink(o.title, "Offer", "Home", new { id = o.id }, null)</h3>
+                                @if (o.Comment.Count() > 0)
+                                { @Html.Raw("<p>Średnia ocen: " + o.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                                <p>
+                                    @Html.Raw(o.Subcategory.Category.name) > @Html.Raw(o.Subcategory.name)
+                                </p>
+                                <p>
+                                    @Html.Raw(o.description.Length > 256 ? StripHTML(o.description).Substring(0, 255) + "..." : StripHTML(o.description))
+                                </p>
+                                <p>
+                                    @Html.Raw(o.iscompanyaddress ? o.Company.address.Replace(", Polska", "") : o.address.Replace(", Polska", ""))
+                                </p>
+                                <p>
+                                    @Html.Raw((o.agefrom == o.ageto ? o.ageto.ToString() : o.agefrom.ToString() + " - " + o.ageto.ToString()) + " lat" + (o.ageto < 5 ? "a" : ""))
+                                    @Html.Raw((o.individual ? " | Indywidualne " : "") + (o.firstfree ? " | Pierwsze zajecia za darmo " : "") + (o.drive ? " | Dojazd " : "") + (o.online ? " | Online " : ""))
+                                </p>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    $.ajax({
+        url: location.origin + '/Home/Checked', success: function (data) {
+        }
+    });
+</script>    
+}

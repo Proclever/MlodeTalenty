@@ -1,0 +1,286 @@
+﻿@using Microsoft.AspNet.Identity
+@using System.Globalization
+@model MT.Models.Offer
+@{
+    ViewBag.Title = Model.title;
+    var userid = User.Identity.GetUserId();
+    bool isvuser = ViewBag.isvuser;
+}
+
+<h2 style="text-align:center">@Html.Raw(Model.title)</h2>
+
+@if (Model.Company.userid == ViewBag.userid)
+{
+    <div class="jumbotron">
+        <p style="text-align:center">
+            Opcje
+        </p>
+        <p style="text-align:center">
+            @if (Model.publicated)
+            { <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@Url.Action("Publishing", "Home", new { offerid = Model.id, publicated = false })" role="button">Ukryj ofertę</a> }
+            else
+            { <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@Url.Action("Publishing", "Home", new { offerid = Model.id, publicated = true })" role="button">Opublikuj</a> }
+            <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-default btn-lg" href="@Url.Action("EditOffer", "Home", new { id = Model.id })" role="button">Edytuj</a>
+            <a style="width:175px;margin-left:20px;margin-right:20px;margin-top:10px;margin-bottom:10px;" class="btn btn-danger btn-lg confirm" href="@Url.Action("DeleteOffer", "Home", new { id = Model.id })" role="button">Usuń</a>
+        </p>
+    </div>
+}
+else { <hr /> }
+
+<div class="row">
+    <div class="col-lg-3 col-md-3 col-sm-4">
+        <div>
+            @if (Model.Company.userid == ViewBag.userid && Model.Photo.Where(x => x.ismain).Count() > 0)
+            { <a style="position:absolute;right: 0;margin-right: 15px;" class="btn btn-danger btn-xs" href="@Url.Action("DeletePhoto", "Home", new { id = Model.Photo.Where(x => x.ismain).First().id })" role="button">✖</a> }
+            <a href="@(Request.Url.GetLeftPart(UriPartial.Authority) + "/images/" + (Model.Photo.Where(x => x.ismain).Count() > 0 ? (Model.Photo.Where(x => x.ismain).First().url) : "defaultoffer.png"))">
+                <img style="height: 100%; width: 100%; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (Model.Photo.Where(x => x.ismain).Count() > 0 ? (Model.Photo.Where(x => x.ismain).First().url) : "defaultoffer.png"))" />
+            </a>
+        </div>
+        <div class="row">
+            @foreach (var p in Model.Photo.Where(x => x.ismain == false).ToList())
+            {
+                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                    @if (Model.Company.userid == ViewBag.userid)
+                    { <a style="position:absolute;right: 0;margin-right: 15px;" class="btn btn-danger btn-xs" href="@Url.Action("DeletePhoto", "Home", new { id = p.id })" role="button">✖</a> }
+                    <a href="@(Request.Url.GetLeftPart(UriPartial.Authority) + "/images/" + p.url)"><img style="height: 100%; width: 100%; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + p.url)" /></a>               
+                </div>
+            }
+        </div>
+        <div>
+            @if (Model.Company.userid == ViewBag.userid && Model.Photo.Count() < 3)
+            {
+                using (Html.BeginForm("AddPhoto", "Home", new { offer_id = Model.id }, FormMethod.Post, new { enctype = "multipart/form-data" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <input type="file" id="imagefile" name="file" accept="image/*" />
+                    <div id="submitdiv"><input type="submit" name="Submit" id="Submit" value="Dodaj zdjęcie" /></div>
+                }
+            }
+        </div>
+        <hr />
+        <div>
+            <img width="32" height="32" src="@Url.Content("~/images/" + (Model.Company.logo != null && Model.Company.logo != "" ? Model.Company.logo : "defaultcompany.png"))" /> <strong>@Html.ActionLink(Model.Company.name, "Company", "Home", new { id = Model.Company.id }, null)</strong>
+        </div>
+        <div style="margin-top:10px;">
+            @if (Model.Comment.Count() > 0) {<p>Średnia ocen: @Model.Comment.Average(x => x.rate).ToString("0.0").Replace(",0","")/5</p>}
+            <p>@Html.Raw(Model.Subcategory.Category.name) > @Html.Raw(Model.Subcategory.name)</p>
+            <p>
+                @if (Model.price != null && Model.price.Value > 0 && Model.period != "" && Model.period != null) { @Html.Raw("Cena: " + Model.price.Value.ToString() + "/" + Model.period) }
+                Wiek: @Html.Raw(Model.agefrom + " - " + Model.ageto)<br />
+                @Html.Raw((Model.individual ? "<br>Indywidualne" : "") + (Model.firstfree ? "<br>Pierwsze zajecia za darmo" : "") + (Model.drive ? "<br>Dojazd" : "") + (Model.online ? "<br>Online" : ""))
+            </p>
+            @if (Model.price != null && Model.price != 0 && Model.period != null && Model.period != "") { @Html.Raw("<p>" + Model.price.Value.ToString("0.00") + " / " + Model.period + "</p>") }
+            <hr />
+            <p id="phone"></p>
+            <p>
+                @if (Model.email != "" && Model.email != null)
+                { @Html.ActionLink("Napisz wiadomość", "EmailForm", "Home", new { id = Model.id, kind = "Offer" }, null) }
+            </p>
+        </div>
+        <div>
+            <div id="map" style="position:relative; width: 300px; height: 300px; max-width: 100%; max-height: 100%;  object-fit: contain;border: 1px solid #eee;border-radius: 5px;"></div>
+        </div>
+    </div>
+    <div class="col-lg-9 col-md-9 col-sm-8">
+        @Html.Raw(Model.description)
+        @if (isvuser)
+        {
+            <p>
+                @if (Model.Watching.Where(x => x.User.userid == userid).Count() == 1)
+                {
+                <a style="margin:10px;" class="btn btn-default btn-lg" href="@Url.Action("DeleteWatching", "Home", new { id = Model.Watching.Where(x => x.User.userid == userid).First().id })" role="button">Nie obserwuj</a>
+                }
+                else
+                {
+                <a style="margin:10px;" class="btn btn-default btn-lg" href="@Url.Action("AddWatching", "Home", new { offer_id = Model.id })" role="button">Obserwuj</a>
+                }
+            </p>
+        }
+        <hr />
+        <div>
+            <h3>Godziny zajęć
+                @if (Model.Company.userid == ViewBag.userid)
+                { <a style="margin-left:10px;margin-top:1px;margin-bottom:1px;" class="btn btn-default btn-sm" href="@Url.Action("AddEventDate", "Home", new { offer_id = Model.id })" role="button">Dodaj</a> }
+            </h3>
+            <div>
+                
+                @if (Model.EventDate.Where(x => x.day == 1).Count() > 0)
+                {
+                    @Html.Raw("Poniedziałki: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 1).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 1).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 2).Count() > 0)
+                {
+                    @Html.Raw("Wtorki: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 2).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 2).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 3).Count() > 0)
+                {
+                    @Html.Raw("Środy: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 3).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 3).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 4).Count() > 0)
+                {
+                    @Html.Raw("Czwartki: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 4).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 4).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 5).Count() > 0)
+                    {
+                    @Html.Raw("Piątki: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 5).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 5).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 6).Count() > 0)
+                {
+                    @Html.Raw("Soboty: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 6).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 6).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+                @if (Model.EventDate.Where(x => x.day == 7).Count() > 0)
+                {
+                    @Html.Raw("Niedziele: ")
+                    foreach (var e in Model.EventDate.Where(x => x.day == 7).ToList())
+                    {
+                        @Html.Raw(e.from.ToString("HH:mm", CultureInfo.InvariantCulture) + " - " + e.to.ToString("HH:mm", CultureInfo.InvariantCulture))
+                        if (Model.Company.userid == ViewBag.userid)
+                        { <a style="margin:2px;" class="btn btn-danger btn-xs" href="@Url.Action("DeleteEventDate", "Home", new { id = e.id })" role="button">✖</a> }
+                        @Html.Raw(e.Equals(Model.EventDate.Where(x => x.day == 7).ToList().Last()) ? "" : ", ")
+                    }
+                    <br />
+                }
+            </div>
+        </div>
+        <hr />
+        <div>
+            <h3>Opinie
+            @if (isvuser && Model.Comment.Where(x => x.User.userid == userid).Count()==0)
+            { <a style="margin-left:10px;margin-top:1px;margin-bottom:1px;" class="btn btn-default btn-sm" href="@Url.Action("AddComment", "Home", new { offerid = Model.id })" role="button">Dodaj</a> }
+            </h3>
+            @foreach (var com in Model.Comment)
+            {
+                <div class="row" style="margin:2px;padding:5px;background-color:#eee; border-radius:5px;">
+                    <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2">
+                        <img style="height: 100%; width: 100%; max-height:150px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (com.User.photo != null && com.User.photo != "" ? com.User.photo : "defaultuser.png"))" />
+                        <p style="text-align:center">@Html.Raw(com.name)</p>
+                        @if (com.User.userid == userid)
+                        { <p style="text-align:center"><a style="margin:2px;" class="btn btn-default btn-xs" href="@Url.Action("EditComment", "Home", new { id = com.id })" role="button">Edytuj</a><a style="margin:2px;" class="btn btn-default btn-xs" href="@Url.Action("DeleteComment", "Home", new { id = com.id })" role="button">Usuń</a></p> }
+                    </div>
+                    <div>
+                        <p><strong>@Html.Raw(com.rate.ToString())/5</strong> @Html.Raw(com.title)</p>
+                        <p style="font-style: italic;">@Html.Raw(com.comment)</p>
+                    </div>
+                </div>
+            }
+            @if (Model.Comment.Count() == 0)
+            { <p>@Html.Raw("Nie dodano żadnej opinii. " + (isvuser ? "Bądź pierwszy!" : ""))</p> }
+        </div>
+    </div>
+</div>
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "__AjaxAntiForgeryForm" }))
+{
+    @Html.AntiForgeryToken()
+}
+
+
+@section Scripts {
+<script type="text/javascript">
+    var form = $('#__AjaxAntiForgeryForm');
+    var token = $('input[name="__RequestVerificationToken"]', form).val();
+    $.ajax({
+        url: location.origin + '/Home/Phone?isoffer=true&id=@Model.id.ToString()', type: 'POST', data: { __RequestVerificationToken: token }, success: function (data) {
+            document.getElementById('phone').insertAdjacentHTML('afterbegin', data);
+        }
+    });
+    //$(document).ready(function () {
+    //    $('#imagefile').bind('change', function() {
+    //        if (size >= this.files[0].size / 1024 / 1024) {
+    //            $('#imagefile').val() = null;
+    //            alert('Rozmiar pliku musi być mniejszy niż 10 MB.');
+    //        }
+    //        if($('#image-file').val() == null) {
+    //            $('#submitdiv').hide();
+    //        }
+    //        else {
+    //            $('#submitdiv').show();
+    //        }
+    //    });
+
+    //    if($('#imagefile').val() == null) {
+    //        $('#submitdiv').hide();
+    //    }
+    //    else {
+    //        $('#submitdiv').show();
+    //    }
+    //});
+    $(function () {
+        $('.confirm').click(function () {
+            return window.confirm("Jesteś pewien, że chcesz usunąć tą ofertę?");
+        });
+    });
+    function GetMap() {
+        var map = new Microsoft.Maps.Map('#map', {
+            credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa',
+            center: new Microsoft.Maps.Location(@Model.lat.ToString().Replace(',','.'), @Model.lon.ToString().Replace(',', '.')),
+            zoom: 15
+        });
+        map.entities.clear();
+        var pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), { width: 50, height: 50, draggable: false });
+        map.entities.push(pushpin);
+        pushpin.setLocation(new Microsoft.Maps.Location(@Model.lat.ToString().Replace(',', '.'), @Model.lon.ToString().Replace(',', '.')));
+
+        var infobox = new Microsoft.Maps.Infobox(map.getCenter(), {
+            title: '@Model.objectname',
+            description: '@Model.address'
+        });
+        infobox.setMap(map);
+    }
+    //GetMap();
+    
+    if(document.getElementById('imagefile').value == null || document.getElementById('imagefile').value == '') {
+        document.getElementById('submitdiv').style.display = "none";
+    }
+    else {
+        document.getElementById('submitdiv').style.display = "block";
+    }
+</script>
+}

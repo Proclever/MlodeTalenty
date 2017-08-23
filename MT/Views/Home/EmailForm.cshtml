@@ -1,0 +1,45 @@
+﻿@model MT.Models.EmailFormModel
+<h2>@ViewBag.Title</h2>
+<h3>@ViewBag.Subtitle</h3>
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        <div class="form-group">
+            @Html.LabelFor(model => model.FromName, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.FromName, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.FromName)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.FromEmail, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.FromEmail, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.FromEmail)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.Subject, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.Subject, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.Subject)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.Message, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.Message, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.Message)
+            </div>
+        </div>
+        @Html.HiddenFor(model => model.StartTime)
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Wyślij" class="btn btn-default btn-lg" />
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,1352 @@
+﻿@using Microsoft.AspNet.Identity
+@using MT.Models
+@functions
+{ 
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{ 
+    var categories = db.Categorys.Select(x => new SelectListItem { Value = x.id.ToString(), Text = x.name });
+    var userid = User.Identity.GetUserId();
+    bool? iscompany = null;
+    int newnots = 0;
+    List<Offer> coffers = new List<Offer>();
+    if (Request.IsAuthenticated)
+    {
+        var u = db.Users.Where(x => x.userid == userid);
+        if (u.Count() == 1)
+        {
+            iscompany = false;
+            newnots = u.First().UserNotification.Where(x => x.check == false).Count();
+        }
+        else
+        {
+            var c = db.Companys.Where(x => x.userid == userid);
+            if (c.Count() == 1)
+            {
+                iscompany = true;
+                newnots = c.First().CompanyNotification.Where(x => x.check == false).Count();
+                coffers = c.First().Offer.OrderBy(x => x.created).ToList();
+            }
+        }
+    }
+    bool incomp = false;
+    try { incomp = db.Companys.Where(x => x.userid == userid).First().name == null || db.Companys.Where(x => x.userid == userid).First().name == "" ? true : false; }
+    catch { }
+    //var pushpins = db.Offers.Where(x => x.lat != 0 && x.lon != 0).ToList();
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Młode Talenty</title>
+    <meta name="description" content="Portal stworzony z myślą o dzieciach, młodych talentach poszukujących i rozszerzających swoje zainteresowania oraz hobby.">
+    <link rel="icon" href="@Url.Content("~/images/icon32.png")" />
+    <link rel="icon" href="@Url.Content("~/images/icon192.png")" />
+    <link rel="apple-touch-icon-precomposed" href="@Url.Content("~/images/icon180.png")" />
+    <meta name="msapplication-TileImage" content="@Url.Content("~/images/icon270.png")" />
+    @Styles.Render("~/Content/css")
+    <style>
+        @@media (min-width: 768px) {
+        .row-equal {
+            display: -webkit-box;
+            display: -webkit-flex;
+            display: -ms-flexbox;
+            display: flex;
+        }
+        }
+        input#location {
+            background-color: white !important;
+        }
+    </style>
+    <script type="text/javascript" id="cookieinfo"
+            src="//cookieinfoscript.com/js/cookieinfo.min.js"
+            data-text-align="left"
+            data-close-text="Rozumiem"
+            data-linkmsg="Polityka prywatności"
+            data-moreinfo="@Url.Action("PrivacyPolicy", "Home")"
+            data-message="Strona korzysta z plików cookies w celach funkcjonalnych. Kontynuując przeglądanie, zgadzasz się na ich wykorzystanie."
+            data-divlinkbg="#337ab7"
+            data-bg="#ddd"
+            data-divlink="#FFF">
+    </script>
+    
+    @Scripts.Render("~/bundles/modernizr")
+
+    <!-- Reference to the Bing Maps SDK -->
+    <!--<script type='text/javascript'
+            src='http://www.bing.com/api/maps/mapcontrol?callback=GetMap'
+            async defer></script>-->
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-5969374763207250",
+        enable_page_level_ads: true
+      });
+    </script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-104406420-1', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+</head>
+<body style="padding-top:10px;">
+    <div><a href="@Url.Action("Index", "Home")"><p style="text-align:center"><img style="width:500px;max-width:100%" src="@Url.Content("~/images/hl21.png")" alt="MŁODE TALENTY" /></p></a></div>
+    @if (ViewBag.index!=null)
+    {
+        <div style="position: relative;padding:40px;padding-top:150px;width:100%;min-height:400px; background-image: url('@Url.Content("~/images/ib.png")');background-size: cover;background-position:top center;background-attachment: fixed;">
+            @using (Html.BeginForm("Offers", "Home", FormMethod.Get))
+            {
+            <div class="row" style="bottom: 2px;margin-bottom:10px">
+                <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+                    @Html.TextBox("search", ViewBag.search == null ? null : (string)ViewBag.search, new { @class = "form-control input-lg", @placeholder = "Czego szukasz?", @style = "max-width:100%;margin:5px;" })
+                </div>
+                <div id='searchBoxContainer' class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+                    @Html.TextBox("location", ViewBag.location == null ? null : (string)ViewBag.location, new { @class = "form-control input-lg", @placeholder = "Twój adres", @style = "max-width:100%;margin:5px;background-color:white !important" })
+                </div> <div id='printoutPanel'></div>
+                @Html.Hidden("latitude", ViewBag.latitude == null ? null : (string)ViewBag.latitude)
+                @Html.Hidden("longitude", ViewBag.longitude == null ? null : (string)ViewBag.longitude)
+                <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                    <input type="submit" class="btn btn-default btn-lg" style="width:100%;margin:5px;" value="Wyszukaj" />
+                </div>
+                <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                    <input id="advbutton" type="button" class="btn btn-default btn-lg" style="width:100%;margin:5px;float:right;" onclick="advancedsearch()" value="Szczegóły" />
+                </div>
+            </div>
+            <div id="advancedsearch" style="display:none;color:white !important">
+                <div class="row" style="margin-bottom:15px;">
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.Label("Dystans")<br />
+                        @Html.TextBox("maxdistance", ViewBag.maxdistance == null ? 10 : (int)ViewBag.maxdistance, new { @type = "number", @min = "0", @max = "999", @class = "form-control input-sm", @style = "width:70px;display:inline" }) km
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.Label("Wiek")<br />
+                        @Html.TextBox("age", ViewBag.age == null ? null : (int?)ViewBag.age, new { @type = "number", @min = "0", @max = "17", @class = "form-control input-sm", @style = "width:60px;display:inline" }) lat
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.CheckBox("individual", ViewBag.individual == null ? false : (bool)ViewBag.individual) @Html.Label("Tylko indywidualne", new { @style = "display:inline" })
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.CheckBox("firstfree", ViewBag.firstfree == null ? false : (bool)ViewBag.firstfree) @Html.Label("Darmowe pierwsze zajęcia", new { @style = "display:inline" })
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.CheckBox("drive", ViewBag.drive == null ? false : (bool)ViewBag.drive) @Html.Label("Tylko z dojazdem do klienta", new { @style = "display:inline" })
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                        @Html.CheckBox("online", ViewBag.online == null ? false : (bool)ViewBag.online) @Html.Label("Tylko online", new { @style = "display:inline" })
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-6 col-md-6">
+                        @Html.Label("Dni tygodnia i godziny")
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Poniedziałek")
+                                    @Html.CheckBox("monday", ViewBag.monday == null ? true : (bool)ViewBag.monday)
+                                </div>
+                            </div>
+                            <div id="mondaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("mondayfromh", ViewBag.mondayfromh == null ? 0 : (int)ViewBag.mondayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="mondayfromm" name="mondayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("mondaytoh", ViewBag.mondaytoh == null ? 23 : (int)ViewBag.mondaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="mondaytom" name="mondaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.mondaytom != null && ViewBag.mondaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.mondaytom != null && ViewBag.mondaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.mondaytom == null || (ViewBag.mondaytom != null && ViewBag.mondaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Wtorek")
+                                    @Html.CheckBox("tuesday", ViewBag.tuesday == null ? true : (bool)ViewBag.tuesday)
+                                </div>
+                            </div>
+                            <div id="tuesdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("tuesdayfromh", ViewBag.tuesdayfromh == null ? 0 : (int)ViewBag.tuesdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="tuesdayfromm" name="tuesdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("tuesdaytoh", ViewBag.tuesdaytoh == null ? 23 : (int)ViewBag.tuesdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="tuesdaytom" name="tuesdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.tuesdaytom == null || (ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Środa")
+                                    @Html.CheckBox("wednesday", ViewBag.wednesday == null ? true : (bool)ViewBag.wednesday)
+                                </div>
+                            </div>
+                            <div id="wednesdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("wednesdayfromh", ViewBag.wednesdayfromh == null ? 0 : (int)ViewBag.wednesdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="wednesdayfromm" name="wednesdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("wednesdaytoh", ViewBag.wednesdaytoh == null ? 23 : (int)ViewBag.wednesdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="wednesdaytom" name="wednesdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.wednesdaytom == null || (ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Czwartek")
+                                    @Html.CheckBox("thursday", ViewBag.thursday == null ? true : (bool)ViewBag.thursday)
+                                </div>
+                            </div>
+                            <div id="thursdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("thursdayfromh", ViewBag.thursdayfromh == null ? 0 : (int)ViewBag.thursdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="thursdayfromm" name="thursdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("thursdaytoh", ViewBag.thursdaytoh == null ? 23 : (int)ViewBag.thursdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="thursdaytom" name="thursdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.thursdaytom != null && ViewBag.thursdaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.thursdaytom != null && ViewBag.thursdaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.thursdaytom == null || (ViewBag.thursdaytom != null && ViewBag.thursdaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Piątek")
+                                    @Html.CheckBox("friday", ViewBag.friday == null ? true : (bool)ViewBag.friday)
+                                </div>
+                            </div>
+                            <div id="fridaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("fridayfromh", ViewBag.fridayfromh == null ? 0 : (int)ViewBag.fridayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="fridayfromm" name="fridayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("fridaytoh", ViewBag.fridaytoh == null ? 23 : (int)ViewBag.fridaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="fridaytom" name="fridaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.fridaytom != null && ViewBag.fridaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.fridaytom != null && ViewBag.fridaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.fridaytom == null || (ViewBag.fridaytom != null && ViewBag.fridaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Sobota")
+                                    @Html.CheckBox("saturday", ViewBag.saturday == null ? true : (bool)ViewBag.saturday)
+                                </div>
+                            </div>
+                            <div id="saturdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("saturdayfromh", ViewBag.saturdayfromh == null ? 0 : (int)ViewBag.saturdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="saturdayfromm" name="saturdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("saturdaytoh", ViewBag.saturdaytoh == null ? 23 : (int)ViewBag.saturdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="saturdaytom" name="saturdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.saturdaytom != null && ViewBag.saturdaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.saturdaytom != null && ViewBag.saturdaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.saturdaytom == null || (ViewBag.saturdaytom != null && ViewBag.saturdaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-bottom:5px;">
+                            <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                <div style="float:right">
+                                    @Html.Label("Niedziela")
+                                    @Html.CheckBox("sunday", ViewBag.sunday == null ? true : (bool)ViewBag.sunday)
+                                </div>
+                            </div>
+                            <div id="sundaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12" style="margin-left:-5px;margin-right:-5px;padding-left:0px;padding-right:0px;">
+                                @Html.TextBox("sundayfromh", ViewBag.sundayfromh == null ? 0 : (int)ViewBag.sundayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="sundayfromm" name="sundayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 45 ? "selected" : "")>45</option>
+                                </select>
+                                @Html.Raw(" - ")
+                                @Html.TextBox("sundaytoh", ViewBag.sundaytoh == null ? 23 : (int)ViewBag.sundaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                @Html.Raw(":")
+                                <select id="sundaytom" name="sundaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                    <option value=0>00</option>
+                                    <option value=15 @Html.Raw(ViewBag.sundaytom != null && ViewBag.sundaytom == 15 ? "selected" : "")>15</option>
+                                    <option value=30 @Html.Raw(ViewBag.sundaytom != null && ViewBag.sundaytom == 30 ? "selected" : "")>30</option>
+                                    <option value=45 @Html.Raw((ViewBag.sundaytom == null || (ViewBag.sundaytom != null && ViewBag.sundaytom == 45)) ? "selected" : "")>45</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-2 col-md-2">
+                        <div class="row" id="catlabel" style="margin-top:5px;">@Html.Label("Kategoria")</div>
+                        <select id="category1" name="category1" class="form-control" style="max-width:100%" onchange="OnCategory1Change(this.value)">
+                            <option value="">wszystkie</option>
+                            @foreach (var c in categories)
+                            {
+                                <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                            }
+                        </select>
+                        <div class="row" id="subcatlabel" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                        <select id="subcategory11" name="subcategory11" class="form-control" style="max-width:100%" onchange="OnSubcategory11Change(this.value)">
+                            <option value="">wszystkie</option>
+                        </select>
+                        <br />
+                        <select id="subcategory12" name="subcategory12" class="form-control" style="max-width:100%" onchange="OnSubcategory12Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                        <br />
+                        <select id="subcategory13" name="subcategory13" class="form-control" style="max-width:100%" onchange="OnSubcategory13Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-2">
+                        <div class="row" id="catlabel2" style="margin-top:5px;">@Html.Label("Dodatkowa kategoria")</div>
+                        <select id="category2" name="category2" class="form-control" style="max-width:100%" onchange="OnCategory2Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                            @foreach (var c in categories)
+                            {
+                                <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                            }
+                        </select>
+                        <div class="row" id="subcatlabel2" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                        <select id="subcategory21" name="subcategory21" class="form-control" style="max-width:100%" onchange="OnSubcategory21Change(this.value)">
+                            <option value="">wszystkie</option>
+                        </select>
+                        <br />
+                        <select id="subcategory22" name="subcategory22" class="form-control" style="max-width:100%" onchange="OnSubcategory22Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                        <br />
+                        <select id="subcategory23" name="subcategory23" class="form-control" style="max-width:100%" onchange="OnSubcategory23Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-2">
+                        <div class="row" id="catlabel3" style="margin-top:5px;">@Html.Label("Dodatkowa kategoria")</div>
+                        <select id="category3" name="category3" class="form-control" style="max-width:100%" onchange="OnCategory3Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                            @foreach (var c in categories)
+                            {
+                                <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                            }
+                        </select>
+                        <div class="row" id="subcatlabel3" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                        <select id="subcategory31" name="subcategory31" class="form-control" style="max-width:100%" onchange="OnSubcategory31Change(this.value)">
+                            <option value="">wszystkie</option>
+                        </select>
+                        <br />
+                        <select id="subcategory32" name="subcategory32" class="form-control" style="max-width:100%" onchange="OnSubcategory32Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                        <br />
+                        <select id="subcategory33" name="subcategory33" class="form-control" style="max-width:100%" onchange="OnSubcategory33Change(this.value)">
+                            <option value="">dodaj kolejną</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="navbar navbar-inverse" style="margin-bottom:0px;border-radius:0px;">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div class="container">
+                <div class="navbar-collapse collapse">
+                    <ul class="nav navbar-nav">
+                        @if (newnots > 0)
+                        {
+                            <li>@Html.ActionLink("Nowe powiadomienia (" + newnots.ToString() + ")", "Index", "Home")</li>
+                        }
+                        else
+                        {
+                            if (iscompany == null)
+                            { <li>@Html.ActionLink("Strona główna", "Index", "Home")</li> }
+                            else
+                            { <li>@Html.ActionLink("Panel", "Index", "Home")</li> }
+                        }
+                        <!--<li>@Html.ActionLink("Wyszukaj", "Offers", "Home")</li>-->
+                        @if (Request.IsAuthenticated)
+                        {
+                            if (iscompany == true)
+                            {
+                                <li>@Html.ActionLink("Twoja działalność", "Company", "Home", new { id = db.Companys.Where(x => x.userid == userid).First().id }, null)</li>
+                                if (!incomp)
+                                {
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Twoje oferty<span class="caret"></span></a>
+                                        <ul class="dropdown-menu">
+                                            @for (int i = 0; i < coffers.Count(); i++)
+                                            {
+                                                <li>@Html.ActionLink(coffers.ElementAt(i).title, "Offer", "Home", new { id = coffers.ElementAt(i).id }, null)</li>
+                                                if (i == 4) { break; }
+                                            }
+                                            <li>@Html.ActionLink("Dodaj nową", "AddOffer", "Home")</li>
+                                        </ul>
+                                    </li>
+                                }
+                            }
+                            if (iscompany == false)
+                            {
+                                <li>@Html.ActionLink("Twój profil", "UserV", "Home")</li>
+                            }
+                        }
+                    </ul>
+                    @Html.Partial("_LoginPartial")
+                </div>
+            </div>
+        </div>
+    }
+    <div>
+
+    </div>
+    
+        @if (categories != null && ViewBag.index == null)
+        {
+            <div style="padding:50px;background-color:#464b53;">
+                @using (Html.BeginForm("Offers", "Home", FormMethod.Get))
+                {
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+                            @Html.TextBox("search", ViewBag.search == null ? null : (string)ViewBag.search, new { @class = "form-control input-lg", @placeholder = "Czego szukasz?", @style = "max-width:100%;margin:5px;" })
+                        </div>
+                        <div id='searchBoxContainer' class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+                            @Html.TextBox("location", ViewBag.location == null ? null : (string)ViewBag.location, new { @class = "form-control input-lg", @placeholder = "Twój adres", @style = "max-width:100%;margin:5px;background-color:white !important" })
+                        </div> <div id='printoutPanel'></div>
+                        @Html.Hidden("latitude", ViewBag.latitude == null ? null : (string)ViewBag.latitude)
+                        @Html.Hidden("longitude", ViewBag.longitude == null ? null : (string)ViewBag.longitude)
+                        <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                            <input type="submit" class="btn btn-default btn-lg" style="width:100%;margin:5px;" value="Wyszukaj" />
+                        </div>
+                        <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                            <input id="advbutton" type="button" class="btn btn-default btn-lg" style="width:100%;margin:5px;float:right" onclick="advancedsearch()" value="Szczegóły" />
+                        </div>
+                    </div>
+                    <div id="advancedsearch" style="display:none;color:white !important">
+                        <div class="row" style="margin-bottom:15px;">
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.Label("Dystans")<br />
+                                @Html.TextBox("maxdistance", ViewBag.maxdistance == null ? 10 : (int)ViewBag.maxdistance, new { @type = "number", @min = "0", @max = "999", @class = "form-control input-sm", @style = "width:70px;display:inline" }) km
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.Label("Wiek")<br />
+                                @Html.TextBox("age", ViewBag.age == null ? null : (int?)ViewBag.age, new { @type = "number", @min = "0", @max = "17", @class = "form-control input-sm", @style = "width:60px;display:inline" }) lat
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.CheckBox("individual", ViewBag.individual == null ? false : (bool)ViewBag.individual) @Html.Label("Tylko indywidualne", new { @style = "display:inline" })
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.CheckBox("firstfree", ViewBag.firstfree == null ? false : (bool)ViewBag.firstfree) @Html.Label("Darmowe pierwsze zajęcia", new { @style = "display:inline" })
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.CheckBox("drive", ViewBag.drive == null ? false : (bool)ViewBag.drive) @Html.Label("Tylko z dojazdem do klienta", new { @style = "display:inline" })
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-6 col-xs-6">
+                                @Html.CheckBox("online", ViewBag.online == null ? false : (bool)ViewBag.online) @Html.Label("Tylko online", new { @style = "display:inline" })
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-6 col-md-6">
+                                @Html.Label("Dni tygodnia i godziny")
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Poniedziałek")
+                                            @Html.CheckBox("monday", ViewBag.monday == null ? true : (bool)ViewBag.monday)
+                                        </div>
+                                    </div>
+                                    <div id="mondaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("mondayfromh", ViewBag.mondayfromh == null ? 0 : (int)ViewBag.mondayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="mondayfromm" name="mondayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.mondayfromm != null && ViewBag.mondayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("mondaytoh", ViewBag.mondaytoh == null ? 23 : (int)ViewBag.mondaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="mondaytom" name="mondaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.mondaytom != null && ViewBag.mondaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.mondaytom != null && ViewBag.mondaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.mondaytom == null || (ViewBag.mondaytom != null && ViewBag.mondaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Wtorek")
+                                            @Html.CheckBox("tuesday", ViewBag.tuesday == null ? true : (bool)ViewBag.tuesday)
+                                        </div>
+                                    </div>
+                                    <div id="tuesdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("tuesdayfromh", ViewBag.tuesdayfromh == null ? 0 : (int)ViewBag.tuesdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="tuesdayfromm" name="tuesdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.tuesdayfromm != null && ViewBag.tuesdayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("tuesdaytoh", ViewBag.tuesdaytoh == null ? 23 : (int)ViewBag.tuesdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="tuesdaytom" name="tuesdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.tuesdaytom == null || (ViewBag.tuesdaytom != null && ViewBag.tuesdaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Środa")
+                                            @Html.CheckBox("wednesday", ViewBag.wednesday == null ? true : (bool)ViewBag.wednesday)
+                                        </div>
+                                    </div>
+                                    <div id="wednesdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("wednesdayfromh", ViewBag.wednesdayfromh == null ? 0 : (int)ViewBag.wednesdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="wednesdayfromm" name="wednesdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.wednesdayfromm != null && ViewBag.wednesdayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("wednesdaytoh", ViewBag.wednesdaytoh == null ? 23 : (int)ViewBag.wednesdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="wednesdaytom" name="wednesdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.wednesdaytom == null || (ViewBag.wednesdaytom != null && ViewBag.wednesdaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Czwartek")
+                                            @Html.CheckBox("thursday", ViewBag.thursday == null ? true : (bool)ViewBag.thursday)
+                                        </div>
+                                    </div>
+                                    <div id="thursdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("thursdayfromh", ViewBag.thursdayfromh == null ? 0 : (int)ViewBag.thursdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="thursdayfromm" name="thursdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.thursdayfromm != null && ViewBag.thursdayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("thursdaytoh", ViewBag.thursdaytoh == null ? 23 : (int)ViewBag.thursdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="thursdaytom" name="thursdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.thursdaytom != null && ViewBag.thursdaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.thursdaytom != null && ViewBag.thursdaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.thursdaytom == null || (ViewBag.thursdaytom != null && ViewBag.thursdaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Piątek")
+                                            @Html.CheckBox("friday", ViewBag.friday == null ? true : (bool)ViewBag.friday)
+                                        </div>
+                                    </div>
+                                    <div id="fridaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("fridayfromh", ViewBag.fridayfromh == null ? 0 : (int)ViewBag.fridayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="fridayfromm" name="fridayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.fridayfromm != null && ViewBag.fridayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("fridaytoh", ViewBag.fridaytoh == null ? 23 : (int)ViewBag.fridaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="fridaytom" name="fridaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.fridaytom != null && ViewBag.fridaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.fridaytom != null && ViewBag.fridaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.fridaytom == null || (ViewBag.fridaytom != null && ViewBag.fridaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Sobota")
+                                            @Html.CheckBox("saturday", ViewBag.saturday == null ? true : (bool)ViewBag.saturday)
+                                        </div>
+                                    </div>
+                                    <div id="saturdaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("saturdayfromh", ViewBag.saturdayfromh == null ? 0 : (int)ViewBag.saturdayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="saturdayfromm" name="saturdayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.saturdayfromm != null && ViewBag.saturdayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("saturdaytoh", ViewBag.saturdaytoh == null ? 23 : (int)ViewBag.saturdaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="saturdaytom" name="saturdaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.saturdaytom != null && ViewBag.saturdaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.saturdaytom != null && ViewBag.saturdaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.saturdaytom == null || (ViewBag.saturdaytom != null && ViewBag.saturdaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-bottom:5px;">
+                                    <div class="col-lg-4 col-md-4 col-sm-3" style="float:left">
+                                        <div style="float:right">
+                                            @Html.Label("Niedziela")
+                                            @Html.CheckBox("sunday", ViewBag.sunday == null ? true : (bool)ViewBag.sunday)
+                                        </div>
+                                    </div>
+                                    <div id="sundaytimes" class="col-lg-8 col-md-8 col-sm-9 col-xs-12">
+                                        @Html.TextBox("sundayfromh", ViewBag.sundayfromh == null ? 0 : (int)ViewBag.sundayfromh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="sundayfromm" name="sundayfromm" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw(ViewBag.sundayfromm != null && ViewBag.sundayfromm == 45 ? "selected" : "")>45</option>
+                                        </select>
+                                        @Html.Raw(" - ")
+                                        @Html.TextBox("sundaytoh", ViewBag.sundaytoh == null ? 23 : (int)ViewBag.sundaytoh, new { @type = "number", @min = "0", @max = "23", @required = "required", @class = "form-control input-sm", @style = "width:57px;display:inline" })
+                                        @Html.Raw(":")
+                                        <select id="sundaytom" name="sundaytom" class="form-control input-sm" style="width:57px;display:inline">
+                                            <option value=0>00</option>
+                                            <option value=15 @Html.Raw(ViewBag.sundaytom != null && ViewBag.sundaytom == 15 ? "selected" : "")>15</option>
+                                            <option value=30 @Html.Raw(ViewBag.sundaytom != null && ViewBag.sundaytom == 30 ? "selected" : "")>30</option>
+                                            <option value=45 @Html.Raw((ViewBag.sundaytom == null || (ViewBag.sundaytom != null && ViewBag.sundaytom == 45)) ? "selected" : "")>45</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-2 col-md-2">
+                                <div class="row" id="catlabel" style="margin-top:5px;">@Html.Label("Kategoria")</div>
+                                <select id="category1" name="category1" class="form-control" style="max-width:100%" onchange="OnCategory1Change(this.value)">
+                                    <option value="">wszystkie</option>
+                                    @foreach (var c in categories)
+                                    {
+                                        <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                                    }
+                                </select>
+                                <div class="row" id="subcatlabel" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                                <select id="subcategory11" name="subcategory11" class="form-control" style="max-width:100%" onchange="OnSubcategory11Change(this.value)">
+                                    <option value="">wszystkie</option>
+                                </select>
+                                <br />
+                                <select id="subcategory12" name="subcategory12" class="form-control" style="max-width:100%" onchange="OnSubcategory12Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                                <br />
+                                <select id="subcategory13" name="subcategory13" class="form-control" style="max-width:100%" onchange="OnSubcategory13Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-2">
+                                <div class="row" id="catlabel2" style="margin-top:5px;">@Html.Label("Dodatkowa kategoria")</div>
+                                <select id="category2" name="category2" class="form-control" style="max-width:100%" onchange="OnCategory2Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                    @foreach (var c in categories)
+                                    {
+                                        <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                                    }
+                                </select>
+                                <div class="row" id="subcatlabel2" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                                <select id="subcategory21" name="subcategory21" class="form-control" style="max-width:100%" onchange="OnSubcategory21Change(this.value)">
+                                    <option value="">wszystkie</option>
+                                </select>
+                                <br />
+                                <select id="subcategory22" name="subcategory22" class="form-control" style="max-width:100%" onchange="OnSubcategory22Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                                <br />
+                                <select id="subcategory23" name="subcategory23" class="form-control" style="max-width:100%" onchange="OnSubcategory23Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-2 col-md-2">
+                                <div class="row" id="catlabel3" style="margin-top:5px;">@Html.Label("Dodatkowa kategoria")</div>
+                                <select id="category3" name="category3" class="form-control" style="max-width:100%" onchange="OnCategory3Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                    @foreach (var c in categories)
+                                    {
+                                        <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                                    }
+                                </select>
+                                <div class="row" id="subcatlabel3" style="margin-top:5px;">@Html.Label("Podkategorie")</div>
+                                <select id="subcategory31" name="subcategory31" class="form-control" style="max-width:100%" onchange="OnSubcategory31Change(this.value)">
+                                    <option value="">wszystkie</option>
+                                </select>
+                                <br />
+                                <select id="subcategory32" name="subcategory32" class="form-control" style="max-width:100%" onchange="OnSubcategory32Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                                <br />
+                                <select id="subcategory33" name="subcategory33" class="form-control" style="max-width:100%" onchange="OnSubcategory33Change(this.value)">
+                                    <option value="">dodaj kolejną</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+            
+    <div class="container body-content">
+        @RenderBody()
+        <hr />
+        <footer>
+            <p style="text-align:center">@Html.ActionLink("O nas", "About", "Home", null, new { @style = "color:#337ab7;" }) | @Html.ActionLink("Regulamin", "TermsOfUse", "Home", null, new { @style = "color:#337ab7;" }) | @Html.ActionLink("Polityka prywatności", "PrivacyPolicy", "Home", null, new { @style = "color:#337ab7;" }) | @Html.ActionLink("Kontakt", "Contact", "Home", null, new { @style = "color:#337ab7;" })</p>
+            <p style="text-align:center">RZUEP &copy; @DateTime.Now.Year</p>
+            <p style="text-align:center;margin-bottom:10px;">Utworzone dzięki <a href="http://proclever.pl/"><img src="@Url.Content("~/images/proclever14.png")" alt="PROCLEVER" /></a></p>
+        </footer>
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    
+    @RenderSection("scripts", required: false)
+    
+    <script>
+
+
+        function advancedsearch() {
+            if (document.getElementById('advancedsearch').style.display == "none")
+            {
+                document.getElementById('advancedsearch').style.display = "block";
+                document.getElementById('advbutton').value = "Ukryj";
+            }
+            else
+            {
+                document.getElementById('advancedsearch').style.display = "none";
+                document.getElementById('advbutton').value = "Szczegóły";
+            }
+        }
+
+        function hideafter(id) {
+            switch (id) {
+                case 'category1':
+                    document.getElementById('category2').style.display = "none";
+                    document.getElementById('subcategory11').style.display = "none";
+                    document.getElementById('subcatlabel').style.display = "none";
+                    document.getElementById('catlabel2').style.display = "none";
+                    hideafter('category2');
+                    hideafter('subcategory11');
+                    break;
+                case 'category2':
+                    document.getElementById('category3').style.display = "none";
+                    document.getElementById('subcategory21').style.display = "none";
+                    document.getElementById('subcatlabel2').style.display = "none";
+                    document.getElementById('catlabel3').style.display = "none";
+                    hideafter('category3');
+                    hideafter('subcategory21');
+                    break;
+                case 'category3':
+                    document.getElementById('subcategory31').style.display = "none";
+                    document.getElementById('subcatlabel3').style.display = "none";
+                    hideafter('subcategory31');
+                    break;
+                case 'subcategory11':
+                    document.getElementById('subcategory12').style.display = "none";
+                    hideafter('subcategory12');
+                    break;
+                case 'subcategory12':
+                    document.getElementById('subcategory13').style.display = "none";
+                    break;
+                case 'subcategory21':
+                    document.getElementById('subcategory22').style.display = "none";
+                    hideafter('subcategory22');
+                    break;
+                case 'subcategory22':
+                    document.getElementById('subcategory23').style.display = "none";
+                    break;
+                case 'subcategory31':
+                    document.getElementById('subcategory32').style.display = "none";
+                    hideafter('subcategory32');
+                    break;
+                case 'subcategory32':
+                    document.getElementById('subcategory33').style.display = "none";
+                    break;
+            }
+        }
+
+        function showafter(id) {
+            switch (id) {
+                case 'category1':
+                    var c = document.getElementById('category2');
+                    var s = document.getElementById('subcategory11');
+                    c.style.display = "block";
+                    s.style.display = "block";
+                    document.getElementById('subcatlabel').style.display = "block";
+                    document.getElementById('catlabel2').style.display = "block";
+                    if (c.options[c.selectedIndex].value != '') showafter('category2');
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory11');
+                    break;
+                case 'category2':
+                    var c = document.getElementById('category3');
+                    var s = document.getElementById('subcategory21');
+                    c.style.display = "block";
+                    s.style.display = "block";
+                    document.getElementById('subcatlabel2').style.display = "block";
+                    document.getElementById('catlabel3').style.display = "block";
+                    if (c.options[c.selectedIndex].value != '') showafter('category3');
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory21');
+                    break;
+                case 'category3':
+                    var s = document.getElementById('subcategory31');
+                    s.style.display = "block";
+                    document.getElementById('subcatlabel3').style.display = "block";
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory31');
+                    break;
+                case 'subcategory11':
+                    var s = document.getElementById('subcategory12');
+                    s.style.display = "block";
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory12');
+                    break;
+                case 'subcategory12':
+                    var s = document.getElementById('subcategory13');
+                    s.style.display = "block";
+                    break;
+                case 'subcategory21':
+                    var s = document.getElementById('subcategory22');
+                    s.style.display = "block";
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory22');
+                    break;
+                case 'subcategory22':
+                    var s = document.getElementById('subcategory23');
+                    s.style.display = "block";
+                    break;
+                case 'subcategory31':
+                    var s = document.getElementById('subcategory32');
+                    s.style.display = "block";
+                    if (s.options[s.selectedIndex].value != '') showafter('subcategory32');
+                    break;
+                case 'subcategory32':
+                    document.getElementById('subcategory33').style.display = "block";
+                    break;
+            }
+        }
+
+        function OnCategory1Change(id) {
+            $('#subcategory12 option[value=""]').text('dodaj kolejną');
+            $('#subcategory13 option[value=""]').text('dodaj kolejną');
+            hideafter('subcategory11');
+            if (id == '') {
+                hideafter('category1');
+                $('#subcategory11').find('option').not(':first').remove().end().val('');
+                $('#subcategory12').find('option').not(':first').remove().end().val('');
+                $('#subcategory13').find('option').not(':first').remove().end().val('');
+                $('#category2').val('');
+                $('#category3').val('');
+                $('#category2 option[value=""]').text('dodaj kolejną');
+                $('#category3 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory11').find('option').not(':first').remove().end().val('');
+                $('#subcategory12').find('option').not(':first').remove().end().val('');
+                $('#subcategory13').find('option').not(':first').remove().end().val('');
+                $.ajax({
+                    url: location.origin + '/Home/GetSubcategories/?cid=' + id, success: function (data) {
+                        document.getElementById('subcategory11').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory12').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory13').insertAdjacentHTML('beforeend', data);
+                    }
+                });
+                showafter('category1');
+            }
+        }
+
+        function OnCategory2Change(id) {
+            $('#subcategory22 option[value=""]').text('dodaj kolejną');
+            $('#subcategory23 option[value=""]').text('dodaj kolejną');
+            hideafter('subcategory21');
+            if (id == '') {
+                hideafter('category2');
+                $('#subcategory21').find('option').not(':first').remove().end().val('');
+                $('#subcategory22').find('option').not(':first').remove().end().val('');
+                $('#subcategory23').find('option').not(':first').remove().end().val('');
+                $('#category3').val('');
+                $('#category2 option[value=""]').text('dodaj kolejną');
+                $('#category3 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory21').find('option').not(':first').remove().end().val('');
+                $('#subcategory22').find('option').not(':first').remove().end().val('');
+                $('#subcategory23').find('option').not(':first').remove().end().val('');
+                $.ajax({
+                    url: location.origin + '/Home/GetSubcategories/?cid=' + id, success: function (data) {
+                        document.getElementById('subcategory21').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory22').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory23').insertAdjacentHTML('beforeend', data);
+                    }
+                });
+                $('#category2 option[value=""]').text('usuń');
+                showafter('category2');
+            }
+        }
+
+        function OnCategory3Change(id) {
+            $('#subcategory32 option[value=""]').text('dodaj kolejną');
+            $('#subcategory33 option[value=""]').text('dodaj kolejną');
+            hideafter('subcategory31');
+            if (id == '') {
+                hideafter('category3');
+                $('#subcategory31').find('option').not(':first').remove().end().val('');
+                $('#subcategory32').find('option').not(':first').remove().end().val('');
+                $('#subcategory33').find('option').not(':first').remove().end().val('');
+                $('#category3 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory31').find('option').not(':first').remove().end().val('');
+                $('#subcategory32').find('option').not(':first').remove().end().val('');
+                $('#subcategory33').find('option').not(':first').remove().end().val('');
+                $.ajax({
+                    url: location.origin + '/Home/GetSubcategories/?cid=' + id, success: function (data) {
+                        document.getElementById('subcategory31').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory32').insertAdjacentHTML('beforeend', data);
+                        document.getElementById('subcategory33').insertAdjacentHTML('beforeend', data);
+                    }
+                });
+                $('#category3 option[value=""]').text('usuń');
+                showafter('category3');
+            }
+        }
+
+        function OnSubcategory11Change(id) {
+            if($('#subcategory12 option[value=""]').text()=='usuń') $('#subcategory12 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory12').val('');
+                $('#subcategory13').val('');
+                hideafter('subcategory11');
+            }
+            else {
+                showafter('subcategory11');
+            }
+        }
+
+        function OnSubcategory12Change(id) {
+            if($('#subcategory13 option[value=""]').text()=='usuń') $('#subcategory13 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory13').val('');
+                hideafter('subcategory12');
+                $('#subcategory12 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                showafter('subcategory12');
+                $('#subcategory12 option[value=""]').text('usuń');
+            }
+        }
+
+        function OnSubcategory13Change(id) {
+            if (id == '') {
+                $('#subcategory13 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory13 option[value=""]').text('usuń');
+            }
+        }
+
+        function OnSubcategory21Change(id) {
+            if($('#subcategory22 option[value=""]').text()=='usuń') $('#subcategory22 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory22').val('');
+                $('#subcategory23').val('');
+                hideafter('subcategory21');
+            }
+            else {
+                showafter('subcategory21');
+
+            }
+        }
+
+        function OnSubcategory22Change(id) {
+            if($('#subcategory23 option[value=""]').text()=='usuń') $('#subcategory23 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory23 option[value=""]').text('dodaj kolejną');
+                $('#subcategory23').val('');
+                hideafter('subcategory22');
+            }
+            else {
+                showafter('subcategory22');
+                $('#subcategory22 option[value=""]').text('usuń');
+            }
+        }
+
+        function OnSubcategory23Change(id) {
+            if (id == '') {
+                $('#subcategory23 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory23 option[value=""]').text('usuń');
+            }
+        }
+
+        function OnSubcategory31Change(id) {
+            if($('#subcategory32 option[value=""]').text()=='usuń') $('#subcategory32 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory32').val('');
+                $('#subcategory33').val('');
+                hideafter('subcategory31');
+            }
+            else {
+                showafter('subcategory31');
+            }
+        }
+
+        function OnSubcategory32Change(id) {
+            if($('#subcategory33 option[value=""]').text()=='usuń') $('#subcategory33 option[value=""]').text('dodaj kolejną');
+            if (id == '') {
+                $('#subcategory32 option[value=""]').text('dodaj kolejną');
+                $('#subcategory33').val('');
+                hideafter('subcategory32');
+            }
+            else {
+                $('#subcategory32 option[value=""]').text('usuń');
+                showafter('subcategory32');
+            }
+        }
+
+        function OnSubcategory33Change(id) {
+            if (id == '') {
+                $('#subcategory33 option[value=""]').text('dodaj kolejną');
+            }
+            else {
+                $('#subcategory33 option[value=""]').text('usuń');
+            }
+        }
+
+        hideafter('category1');
+        @if (ViewBag.category1 != null && ViewBag.category1 != "") { @Html.Raw("$('#category1').val('" + ViewBag.category1 + "'); OnCategory1Change(" + ViewBag.category1 + ");") }
+        @if (ViewBag.category2 != null && ViewBag.category2 != "") { @Html.Raw("$('#category2').val('" + ViewBag.category2 + "'); OnCategory2Change(" + ViewBag.category2 + ");") }
+        @if (ViewBag.category3 != null && ViewBag.category3 != "") { @Html.Raw("$('#category3').val('" + ViewBag.category3 + "'); OnCategory3Change(" + ViewBag.category3 + ");") }
+        @if (ViewBag.subcategory31 != null && ViewBag.subcategory31 != "") { @Html.Raw("$('#subcategory31').val('" + ViewBag.subcategory31 + "'); OnSubcategory31Change(" + ViewBag.subcategory31 + ");") }
+        @if (ViewBag.subcategory32 != null && ViewBag.subcategory32 != "") { @Html.Raw("$('#subcategory32').val('" + ViewBag.subcategory32 + "'); OnSubcategory32Change(" + ViewBag.subcategory32 + ");") }
+        @if (ViewBag.subcategory33 != null && ViewBag.subcategory33 != "") { @Html.Raw("$('#subcategory33').val('" + ViewBag.subcategory13 + "'); OnSubcategory33Change(" + ViewBag.subcategory33 + ");") }
+
+        function loadMapScenario() {
+            Microsoft.Maps.loadModule('Microsoft.Maps.AutoSuggest', {
+                callback: onLoad,
+                errorCallback: onError,
+                credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa'
+            });
+            function onLoad() {
+                var options = { maxResults: 5 };
+                var manager = new Microsoft.Maps.AutosuggestManager(options);
+                manager.attachAutosuggest('#location', '#searchBoxContainer', selectedSuggestion);
+            }
+            function onError(message) {
+                document.getElementById('printoutPanel').innerHTML = message;
+            }
+            function selectedSuggestion(suggestionResult) {
+                //$('#location').val(suggestionResult.formattedSuggestion);
+                $('#latitude').val(suggestionResult.location.latitude);
+                $('#longitude').val(suggestionResult.location.longitude);
+            }
+            @if (ViewBag.index == null) { @Html.Raw("getmap();") } else { @Html.Raw("getmap2();") }
+            function getmap() {
+                var map = new Microsoft.Maps.Map('#map', {
+                    credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa',
+                    center: new Microsoft.Maps.Location(@Html.Raw(ViewBag.lat == null ? 0 : ViewBag.lat), @Html.Raw(ViewBag.lon == null ? 0 : ViewBag.lon)),
+                    zoom: 15,
+                    showZoomButtons: false,
+                    showLocateMeButton: false
+                });
+                map.entities.clear();
+                var pushpin = new Microsoft.Maps.Pushpin(map.getCenter(), { width: 50, height: 50, draggable: false });
+                map.entities.push(pushpin);
+                pushpin.setLocation(new Microsoft.Maps.Location(@Html.Raw(ViewBag.lat == null ? 0 : ViewBag.lat), @Html.Raw(ViewBag.lon == null ? 0 : ViewBag.lon)));
+                var infobox = new Microsoft.Maps.Infobox(map.getCenter(), {
+                    title: '@Html.Raw(ViewBag.objectname == null ? "" : ViewBag.objectname)',
+                    description: '@Html.Raw(ViewBag.address == null ? "" : ViewBag.address)'
+                });
+                infobox.setMap(map);
+            }
+            function getmap2() {
+                var map2 = new Microsoft.Maps.Map('#map2', {
+                    credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa',
+                    center: new Microsoft.Maps.Location(52.1478, 19.3778),
+                    zoom: 5,
+                });
+                map2.entities.clear();
+                @*@foreach(var p in pushpins)
+                { @Html.Raw("setpush(" + p.lat.ToString().Replace(',','.') + ", " + p.lon.ToString().Replace(',', '.') + ");") }*@
+                function setpush(lat, lon) {
+                    var pushpin2 = new Microsoft.Maps.Pushpin(map2.getCenter(), { width: 10, height: 10, draggable: false });
+                    map2.entities.push(pushpin2);
+                    pushpin2.setLocation(new Microsoft.Maps.Location(lat, lon));
+                }
+            }
+        }
+        function GetLocation() {
+            $.ajax({
+                url: 'https://freegeoip.net/json/' + @Html.Raw(Request.UserHostAddress == "::1" ? "''" : "'" + Request.UserHostAddress + "'"), success: function (json) {
+                    var object = json;
+                    $('#location').val(object.city);
+                    $('#latitude').val(object.latitude);
+                    $('#longitude').val(object.longitude);
+                }
+            });
+            //if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(showPosition); }
+        }
+
+        function showPosition(position) {
+            $.ajax({
+                url: 'http://dev.virtualearth.net/REST/v1/Locations/' + position.coords.latitude + ',' + position.coords.longitude + '?o=json&key=AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa', success: function (json) {
+                    var object = $.parseJSON(json);
+                    alert(object.resourceSets);
+                    //$('#location').val(object.resourceSets); // todo
+                }
+            });
+            //$('#location').val();
+            $('#latitude').val(position.coords.latitude);
+            $('#longitude').val(position.coords.longitude);
+        }
+        @if (ViewBag.location == null || ViewBag.location == "") { @Html.Raw("GetLocation();") }
+        function loadMapScenario2() {
+            var map = new Microsoft.Maps.Map(document.getElementById('map'), {
+                credentials: 'AtFY6f5a1hhgEq3gJEAaT6aK0n6tvlH5CT9FpDPhZd2EuYiswSf5R6MSTCiGCkMa',
+                center: new Microsoft.Maps.Location(52.1478, 19.3778),
+                zoom: 6
+            });
+            Microsoft.Maps.loadModule('Microsoft.Maps.AutoSuggest', function () {
+                var options = {
+                    maxResults: 5,
+                    map: map
+                };
+                var manager = new Microsoft.Maps.AutosuggestManager(options);
+                manager.attachAutosuggest('#had', '#addressContainer', selectedSuggestion);
+            });
+            function selectedSuggestion(suggestionResult) {
+                map.entities.clear();
+                map.setView({ bounds: suggestionResult.bestView });
+                var pushpin = new Microsoft.Maps.Pushpin(suggestionResult.location);
+                map.entities.push(pushpin);
+                $('#address').val(suggestionResult.formattedSuggestion);
+                $('#lat').val(suggestionResult.location.latitude);
+                $('#lon').val(suggestionResult.location.longitude);
+            }
+
+        }
+
+    </script>
+    <script type='text/javascript' src='https://www.bing.com/api/maps/mapcontrol?callback=loadMapScenario2'></script>
+    @if (ViewBag.addoffer == null) {<script type='text/javascript' src='https://www.bing.com/api/maps/mapcontrol?callback=loadMapScenario'></script>}
+    <script>
+        @if (ViewBag.subcategory11 != null && ViewBag.subcategory11 != "") { @Html.Raw("$('#subcategory11').val('" + ViewBag.subcategory11 + "'); OnSubcategory11Change(" + ViewBag.subcategory11 + ");") }
+        @if (ViewBag.subcategory12 != null && ViewBag.subcategory12 != "") { @Html.Raw("$('#subcategory12').val('" + ViewBag.subcategory12 + "'); OnSubcategory12Change(" + ViewBag.subcategory12 + ");") }
+        @if (ViewBag.subcategory13 != null && ViewBag.subcategory13 != "") { @Html.Raw("$('#subcategory13').val('" + ViewBag.subcategory13 + "'); OnSubcategory13Change(" + ViewBag.subcategory13 + ");") }
+        @if (ViewBag.subcategory21 != null && ViewBag.subcategory21 != "") { @Html.Raw("$('#subcategory21').val('" + ViewBag.subcategory21 + "'); OnSubcategory21Change(" + ViewBag.subcategory21 + ");") }
+        @if (ViewBag.subcategory22 != null && ViewBag.subcategory22 != "") { @Html.Raw("$('#subcategory22').val('" + ViewBag.subcategory22 + "'); OnSubcategory22Change(" + ViewBag.subcategory22 + ");") }
+        @if (ViewBag.subcategory23 != null && ViewBag.subcategory23 != "") { @Html.Raw("$('#subcategory23').val('" + ViewBag.subcategory23 + "'); OnSubcategory23Change(" + ViewBag.subcategory23 + ");") }
+        @if (ViewBag.subcategory31 != null && ViewBag.subcategory31 != "") { @Html.Raw("$('#subcategory31').val('" + ViewBag.subcategory31 + "'); OnSubcategory31Change(" + ViewBag.subcategory31 + ");") }
+        @if (ViewBag.subcategory32 != null && ViewBag.subcategory32 != "") { @Html.Raw("$('#subcategory32').val('" + ViewBag.subcategory32 + "'); OnSubcategory32Change(" + ViewBag.subcategory32 + ");") }
+        @if (ViewBag.subcategory33 != null && ViewBag.subcategory33 != "") { @Html.Raw("$('#subcategory33').val('" + ViewBag.subcategory13 + "'); OnSubcategory33Change(" + ViewBag.subcategory33 + ");") }
+    
+        $('#imagefile').change(function() {
+            if(document.getElementById('imagefile').value != null && document.getElementById('imagefile').value != '') {
+                if (10 <= this.files[0].size / 1024 / 1024) {
+                    $('#imagefile').val('');
+                    alert('Rozmiar pliku musi być mniejszy niż 10 MB.');
+                    $('#submitdiv').hide();
+                }
+                else {
+                    $('#submitdiv').show();
+                }
+            }
+            else {
+                $('#submitdiv').hide();
+            }
+        });
+
+        $('#monday').change(function() {
+            if($('#monday').is(":checked")) {
+                $('#mondaytimes').show();
+            }
+            else {
+                $('#mondaytimes').hide();
+            }
+        });
+        if($('#monday').is(":checked")) {
+            $('#mondaytimes').show();
+        }
+        else {
+            $('#mondaytimes').hide();
+        }
+
+        $('#tuesday').change(function() {
+            if($('#tuesday').is(":checked")) {
+                $('#tuesdaytimes').show();
+            }
+            else {
+                $('#tuesdaytimes').hide();
+            }
+        });
+        if($('#tuesday').is(":checked")) {
+            $('#tuesdaytimes').show();
+        }
+        else {
+            $('#tuesdaytimes').hide();
+        }
+
+        $('#wednesday').change(function() {
+            if($('#wednesday').is(":checked")) {
+                $('#wednesdaytimes').show();
+            }
+            else {
+                $('#wednesdaytimes').hide();
+            }
+        });
+        if($('#wednesday').is(":checked")) {
+            $('#wednesdaytimes').show();
+        }
+        else {
+            $('#wednesdaytimes').hide();
+        }
+
+        $('#thursday').change(function() {
+            if($('#thursday').is(":checked")) {
+                $('#thursdaytimes').show();
+            }
+            else {
+                $('#thursdaytimes').hide();
+            }
+        });
+        if($('#thursday').is(":checked")) {
+            $('#thursdaytimes').show();
+        }
+        else {
+            $('#thursdaytimes').hide();
+        }
+
+        $('#friday').change(function() {
+            if($('#friday').is(":checked")) {
+                $('#fridaytimes').show();
+            }
+            else {
+                $('#fridaytimes').hide();
+            }
+        });
+        if($('#friday').is(":checked")) {
+            $('#fridaytimes').show();
+        }
+        else {
+            $('#fridaytimes').hide();
+        }
+
+        $('#saturday').change(function() {
+            if($('#saturday').is(":checked")) {
+                $('#saturdaytimes').show();
+            }
+            else {
+                $('#saturdaytimes').hide();
+            }
+        });
+        if($('#saturday').is(":checked")) {
+            $('#saturdaytimes').show();
+        }
+        else {
+            $('#saturdaytimes').hide();
+        }
+
+        $('#sunday').change(function() {
+            if($('#sunday').is(":checked")) {
+                $('#sundaytimes').show();
+            }
+            else {
+                $('#sundaytimes').hide();
+            }
+        });
+        if($('#sunday').is(":checked")) {
+            $('#sundaytimes').show();
+        }
+        else {
+            $('#sundaytimes').hide();
+        }
+    </script>
+</body>
+</html>

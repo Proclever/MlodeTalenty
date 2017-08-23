@@ -1,0 +1,15 @@
+﻿@model List<MT.Models.Comment>
+@{
+    ViewBag.Title = "Twoje komentarze";
+}
+
+<h2>Twoje komentarze</h2>
+
+@foreach(var com in Model)
+{
+    <div>
+        <h3>@Html.ActionLink(com.Offer.title, "Offer", "Home", new { id = com.offerid })</h3>
+        <p><strong>@Html.Raw(com.rate.ToString())/5</strong> @Html.Raw(com.title)</p>
+        <p style="font-style: italic;">@Html.Raw(com.comment)</p>
+    </div>
+}

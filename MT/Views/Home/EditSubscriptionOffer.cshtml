@@ -1,0 +1,156 @@
+﻿@using MT.Models
+@model MT.Models.SubscribeOffer
+@functions
+{
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{
+    ViewBag.Title = "Dodaj subskrybcję";
+    string userid = ViewBag.userid;
+    var categories = db.Categorys.Select(x => new SelectListItem { Value = x.id.ToString(), Text = x.name });
+}
+
+<h2>Dodaj subskrybcję</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(model => model.id)
+        @Html.HiddenFor(model => model.userid)
+        <div class="form-group">
+            @Html.Label("Kategoria", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                <select id="category" name="category" onchange="OnCategoryChange(this.value)" data-val="true" data-val-required="Pole Kategoria jest wymagane.">
+                    <option value="">wybierz</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@Html.Raw(c.Value)">@Html.Raw(c.Text)</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div id="subcategorydiv" class="form-group" style="display:none" data-val="true" data-val-required="Pole Podkategoria jest wymagane.">
+            @Html.Label("Podkategoria", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                <select id="subcategory" name="subcategory">
+                    <option value="">wszystkie</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.address, new { @class = "control-label col-md-2" })
+            <div id='addressContainer' class="col-md-10">
+                @Html.TextBox("had", Model == null ? "" : Model.address)
+                @Html.ValidationMessageFor(model => model.address)
+            </div>
+            <div id='printoutPanel2'></div>
+        </div>
+        @Html.HiddenFor(model => model.address)
+        @Html.HiddenFor(model => model.lat)
+        @Html.HiddenFor(model => model.lon)
+        <div class="form-group">
+            @Html.Label("Wiek", new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                Od <input class="text-box single-line" data-val="true" data-val-number="Pole Wiek musi być liczbą." data-val-required="Pole Wiek jest wymagane." id="age" name="age" type="number" value=@Html.Raw(Model != null ? Model.age.ToString() : "") min="0" maxlength="17">
+                @Html.ValidationMessageFor(model => model.age)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.individual, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.individual)
+                @Html.ValidationMessageFor(model => model.individual)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.firstfree, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.firstfree)
+                @Html.ValidationMessageFor(model => model.firstfree)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.drive, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.drive)
+                @Html.ValidationMessageFor(model => model.drive)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.online, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.online)
+                @Html.ValidationMessageFor(model => model.online)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.smonday, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.smonday)
+                <div id="cmonday">
+                    @Html.TextBox("smondayfromh", ViewBag.smondayfromh == null ? 8 : (int)ViewBag.smondayfromh, new { type = "number", min = "0", max = "23", required = "required" }):@Html.TextBox("smondayfromm", ViewBag.smondayfromm == null ? 00 : (int)ViewBag.smondayfromm, new { type = "number", min = "0", max = "59", onchange = "if(parseInt(this.value,10)<10)this.value='0'+this.value;", required = "required" }) - @Html.TextBox("smondaytoh", ViewBag.smondaytoh == null ? 16 : (int)ViewBag.smondaytoh, new { type = "number", min = "0", max = "23", required = "required" }):@Html.TextBox("smondaytom", ViewBag.smondaytom == null ? 00 : (int)ViewBag.smondaytom, new { type = "number", min = "0", max = "59", onchange = "if(parseInt(this.value,10)<10)this.value='0'+this.value;", required = "required" })
+                </div>
+            </div>
+        </div>
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Dodaj" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+
+    function OnCategoryChange(id) {
+        if (id == '') {
+            $('#subcategory').find('option').not(':first').remove().end().val('');
+            document.getElementById('subcategorydiv').style.display = "none";
+        }
+        else {
+            $('#subcategory').find('option').not(':first').remove().end().val('');
+            $.ajax({
+                url: location.origin + '/Home/GetSubcategories/?cid=' + id, success: function (data) {
+                    document.getElementById('subcategory').insertAdjacentHTML('beforeend', data);
+                }
+            });
+            document.getElementById('subcategorydiv').style.display = "block";
+        }
+    }
+
+    function SetSubcategory() {
+        document.getElementById('category').value = @Model.categoryid.ToString();
+        var id = @Model.categoryid.ToString();
+
+        var request = makeHttpObject();
+        request.open("GET", location.origin + "/Home/GetSubcategories/?cid=" + id, true);
+        request.send(null);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4) {
+                document.getElementById('subcategory').insertAdjacentHTML('beforeend', request.responseText);
+                document.getElementById('subcategory').value = @Model.subcategoryid.ToString();
+            }
+        };
+        document.getElementById('subcategorydiv').style.display = "block";
+
+        //document.getElementById('subcategory').value = @Model.subcategoryid.ToString();
+    }
+
+    function makeHttpObject() {
+        try {return new XMLHttpRequest();}
+        catch (error) {}
+        try {return new ActiveXObject("Msxml2.XMLHTTP");}
+        catch (error) {}
+        try {return new ActiveXObject("Microsoft.XMLHTTP");}
+        catch (error) {}
+
+        throw new Error("Could not create HTTP request object.");
+    }
+
+    @if (Model != null && Model.subcategoryid != "0" && Model.subcategoryid != "") { @Html.Raw("SetSubcategory();") }
+</script>
+}

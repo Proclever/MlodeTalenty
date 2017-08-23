@@ -1,0 +1,31 @@
+﻿@model MT.Models.User
+@{
+    ViewBag.Title = "Edytuj swoje dane";
+}
+
+<h2>Edytuj swoje dane</h2>
+
+@using (Html.BeginForm(new { enctype = "multipart/form-data" }))
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        @Html.HiddenFor(model => model.id)
+        @Html.HiddenFor(model => model.userid)
+        @Html.HiddenFor(model => model.created)
+        @Html.HiddenFor(model => model.photo)
+        <div class="form-group">
+            @Html.LabelFor(model => model.name, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.name, new { @class = "input-lg", @style = "width:200px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.name)
+            </div>
+        </div>
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Zaktualizuj" class="btn btn-default btn-lg" />
+            </div>
+        </div>
+    </div>
+}

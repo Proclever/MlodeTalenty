@@ -1,0 +1,63 @@
+﻿@using MT.Models
+@model MT.Models.Comment
+@functions
+{
+    private MTModelsDBContext db = new MTModelsDBContext();
+}
+@{
+    ViewBag.Title = "Dodaj opinię";
+    string userid = ViewBag.userid;
+}
+
+<h2>Dodaj opinię</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+    <div class="form-horizontal">
+        @Html.ValidationSummary(true)
+        <div class="form-group">
+            @Html.LabelFor(model => model.rate, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                1 @Html.RadioButtonFor(m => m.rate, 1) &nbsp; 2 @Html.RadioButtonFor(m => m.rate, 2) &nbsp; 3 @Html.RadioButtonFor(m => m.rate, 3) &nbsp; 4 @Html.RadioButtonFor(m => m.rate, 4) &nbsp; 5 @Html.RadioButtonFor(m => m.rate, 5)
+                @Html.ValidationMessageFor(model => model.rate)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.title, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.title, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.title)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.comment, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.comment, new { @class = "input-lg", @style = "width:600px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.comment)
+            </div>
+        </div>
+        <div class="form-group">
+            @Html.LabelFor(model => model.name, new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextBoxFor(model => model.name, new { @class = "input-lg", @style = "width:300px;max-width:100%" })
+                @Html.ValidationMessageFor(model => model.name)
+            </div>
+        </div>
+        @*Genre and Price removed for brevity.*@
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Dodaj" class="btn btn-default btn-lg" />
+            </div>
+        </div>
+    </div>
+}
+@if (db.Users.Where(x => x.userid == userid).First().name != null && db.Users.Where(x => x.userid == userid).First().name != "")
+{
+    @section Scripts {
+    <script>
+        document.getElementById("name").value = '@Html.Raw(db.Users.Where(x => x.userid == userid).First().name)';
+        document.getElementById("name").disabled = true;
+    </script>
+    }
+}

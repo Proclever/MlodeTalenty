@@ -1,0 +1,24 @@
+﻿@{
+    ViewBag.Title = "Strona główna";
+}
+
+<div class="row row-equal">
+    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+        <div style="margin:2px;margin-top:15px;padding:20px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;height:100%">
+            <h2 style="text-align:center;margin-top:0px;">Szukasz zajęć dla swojego dziecka?</h2>
+            <h5 style="text-align:justify">W naszej bazie znajdziesz różnego rodzaju zajęcia w których uczestnikami są dzieci! Piłka nożna, siatkówka, judo, aikido, szachy, taniec, śpiew, wszystko co sobie wymyślisz! Znajdziesz tutaj nie tylko sport, ale również korepetycje z przedmiotów szkolnych, zajęcia z logopedii czy z informatyki!</h5>
+            <h5 style="text-align:justify">Można wyszukiwać zajęcia wpisując kategorię, wpisując lokalizację, a nawet termin kiedy zajęcia mają się odbywać! Z nami znajdziesz hobby dla swojego dziecka nawet w 5 minut!</h5>
+        </div>
+    </div>
+    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+        <div style="margin:2px;margin-top:15px;padding:20px;border: 1px solid #eee;border-radius: 5px; background-color:#fafafa;height:100%">
+            <h2 style="text-align:center;margin-top:0px;">Prowadzisz zajęcia dla dzieci?</h2>
+            <h5 style="text-align:justify">U nas możesz rozszerzyć swoją reklamę! Wystarczy szybka i łatwa rejestracja oraz dodanie ogłoszenia poprzez formularz zgłoszeniowy! Zajmie to około 5 minut, a ogłoszenie trafi nawet do miliona użytkowników! Dodaj swoje ogłoszenie do największej bazy internetowej zajęć dla dzieci!</h5>
+            <h5 style="text-align:justify">W bazie znajdują się zajęcia sportowe, edukacyjne, korepetycje itp. Jednym zdaniem: wszystkie zajęcia, w których uczestnikiem są dzieci!</h5>
+        </div>
+    </div>
+</div>
+<p style="text-align:center;margin-top:20px;"><a style="margin:5px;" class="btn btn-primary btn-lg" href="@Url.Action("Register", "Account")" role="button">Zarejestruj się</a><br />lub <a href="@Url.Action("Login", "Account")">zaloguj</a>.</p>
+
+@section Scripts {
+}

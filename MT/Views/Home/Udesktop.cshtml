@@ -1,0 +1,125 @@
+﻿@using System.Text.RegularExpressions
+@model MT.Models.User
+@{
+    ViewBag.Title = "Strona główna";
+}
+@functions{
+    public static string StripHTML(string input)
+    {
+        return input == null ? "" : Regex.Replace(input, "<.*?>", String.Empty);
+    }
+}
+<h1 style="text-align:center;">Twój panel</h1>
+<div class="row">
+    <div class="col-lg-5 col-md-5">
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Powiadomienia</h2>
+            <div id="usetnots" style="overflow:auto; height:400px;">
+                <hr />
+                @if (Model.UserNotification.Count() == 0)
+                {
+                    <p>Nie posiadasz jeszcze żadnych powiadomień.</p>
+                }
+                else
+                {
+                    foreach (var n in Model.UserNotification.OrderByDescending(x => x.created).ToList())
+                    {
+                        <div @Html.Raw(!n.check ? "style=\"background-color:#ffd;\"" : "")>
+                            @if (n.offer == null || n.offer.Value == 0)
+                            {<p>@Html.Raw(n.title)</p>}
+                            else
+                            { <p><a href="@Url.Action("Offer", "Home", new { id = n.offer.Value })">@Html.Raw(n.title)</a></p> }
+                        </div>
+                        <hr />
+                    }
+                }
+            </div>
+        </div>
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Opinie</h2>
+            <div id="comments" style="overflow:auto; height:400px;">
+                <hr />
+                    @if (Model.Comment.Count() == 0)
+                    {
+                        <p>Nie dodałeś jeszcze żadnych opinii.</p>
+                    }
+                    else
+                    {
+                        foreach (var c in Model.Comment.OrderByDescending(x => x.created).ToList())
+                        {
+                            <div>
+                                <h3>@Html.ActionLink(c.Offer.title, "Offer", "Home", new { id = c.offerid })</h3>
+                                <p><strong>@Html.Raw(c.rate.ToString())/5</strong> @Html.Raw(c.title)</p>
+                                <p style="font-style: italic;">@Html.Raw(c.comment)</p>
+                            </div>
+                            <hr />
+                        }
+                    }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7 col-md-7">
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Obserwowane zajęcia</h2>
+            <div id="wat" style="overflow:auto; height:400px;">
+                <hr />
+                @if (Model.Watching.Count() == 0)
+                { <p>Nie obserwujesz jeszcze żadnych zajęć.</p> }
+                else
+                {
+                    foreach (var wat in Model.Watching.ToList())
+                    {
+                            <div class="row" style="margin:5px;padding:5px;">
+                                <div class="col-lg-3 col-md-3 col-sm-3" style="max-height:400px">
+                                    <a href="@Url.Action("Offer", "Home", new { id = wat.Offer.id })"><img style="height: 100%; width: 100%; max-height:400px; object-fit: contain;border: 1px solid #eee;border-radius: 5px;" src="@Url.Content("~/images/" + (wat.Offer.Photo.Where(x => x.ismain).Count() > 0 ? wat.Offer.Photo.Where(x => x.ismain).First().url : "defaultoffer.png"))" /></a>
+                                </div>
+                                <div class="col-lg-9 col-md-9 col-sm-9">
+                                    <h3 style="margin-top:0px;">@Html.ActionLink(wat.Offer.title, "Offer", "Home", new { id = wat.Offer.id }, null)</h3>
+                                    @if (wat.Offer.Comment.Count() > 0)
+                                    { @Html.Raw("<p>Średnia ocen: " + wat.Offer.Comment.Average(x => x.rate).ToString("0.0").Replace(",0", "") + "/5</p>") }
+                                    <p>
+                                        @Html.Raw(wat.Offer.Subcategory.Category.name) > @Html.Raw(wat.Offer.Subcategory.name)
+                                    </p>
+                                    <p>
+                                        @Html.Raw(wat.Offer.iscompanyaddress ? wat.Offer.Company.address.Replace(", Polska", "") : wat.Offer.address.Replace(", Polska", ""))
+                                    </p>
+                                    <p>
+                                        @Html.Raw((wat.Offer.agefrom == wat.Offer.ageto ? wat.Offer.ageto.ToString() : wat.Offer.agefrom.ToString() + " - " + wat.Offer.ageto.ToString()) + " lat" + (wat.Offer.ageto < 5 ? "a" : ""))
+                                        @Html.Raw((wat.Offer.individual ? " | Indywidualne " : "") + (wat.Offer.firstfree ? " | Pierwsze zajecia za darmo " : "") + (wat.Offer.drive ? " | Dojazd " : "") + (wat.Offer.online ? " | Online " : ""))
+                                    </p>
+                                </div>
+                            </div>
+                            <hr />
+                    }
+                }
+            </div>
+        </div>
+        <div style="background-color:#fafafa;border-radius: 10px;padding:10px;margin-top:30px;">
+            <h2>Obserwowane firmy</h2>
+            <div id="subs" style="overflow:auto; height:400px;">
+                <hr />
+                @if (Model.SubscribeCompany.Count() == 0)
+                { <p>Nie obserwujesz jeszcze żadnych firm.</p> }
+                else
+                {
+                    foreach (var subc in Model.SubscribeCompany.ToList())
+                    {
+                        <div>
+                            <img width="32" height="32" src="@Url.Content("~/images/" + (subc.Company.logo != null && subc.Company.logo != "" ? subc.Company.logo : "defaultcompany.png"))" />
+                            <strong>@Html.ActionLink(subc.Company.name, "Company", "Home", new { id = subc.Company.id }, null)</strong>
+                        </div>
+                        <hr />
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+    $.ajax({
+        url: location.origin + '/Home/Checked', success: function (data) {
+        }
+    });
+    </script>
+}
